@@ -5,7 +5,7 @@ import { db } from '../database/sqlite';
 
 // Configuration
  // Remplacez par votre URL
-const AUTH_TOKEN = SecureStore.getItem('userToken');
+
 
 interface SyncDataResponse {
   user: UserSyncData;
@@ -25,6 +25,7 @@ interface UserSyncData {
   nom: string;
   prenom: string;
   email: string;
+  password: string;
   role: string;
   telephone?: string;
 }
@@ -118,32 +119,72 @@ interface SessionData {
 }
 
 export class SyncService {
+
+
+  private async getAuthToken(): Promise<string | null> {
+  try {
+    return await SecureStore.getItemAsync('userToken');
+  } catch (error) {
+    console.error('Erreur récupération token:', error);
+    return null;
+  }
+}
+private async getAuthId(): Promise<string | null> {
+  try {
+    const rawData = await SecureStore.getItemAsync('userData');
+    if (!rawData) return null;
+
+    const userData = JSON.parse(rawData);
+    return userData.id?.toString() ?? null; // ou juste userData.id si tu veux le number
+  } catch (error) {
+    console.error('Erreur lecture userData:', error);
+    return null;
+  }
+}
+
+
+
+
   /**
    * Récupère les données depuis le backend
    */
   private async fetchSyncData(): Promise<SyncDataResponse> {
-    try {
-      const response = await fetch(`${BASE_URL_API}/public/sync/initial`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${AUTH_TOKEN}`,
-          'Content-Type': 'application/json',
-        },
-      });
+  try {
+    const token = await this.getAuthToken();
+    const userId = await this.getAuthId();
+   const data= await SecureStore.getItemAsync('userData');
 
-      if (!response.ok) {
-        throw new Error(`Erreur HTTP: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      // Le backend retourne ApiResponse.success() qui wrap les données
-      return result.data;
-    } catch (error) {
-      console.error('Erreur lors de la récupération des données:', error);
-      throw error;
+   console.log('Données utilisateur stockées:', data);
+   console.log('User ID récupéré:', userId);
+   console.log('Token récupéré:', token);
+    if (!token) {
+      throw new Error('Token non disponible');
     }
+    
+    if (!userId) {
+      throw new Error('User ID non disponible');
+    }
+    const response = await fetch(`${BASE_URL_API}/public/sync/user/${userId}`, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erreur HTTP: ${response.status}`);
+    }
+
+    const result = await response.json();
+    return result.data;
+
+  } catch (error) {
+    console.error('Erreur lors de la récupération des données:', error);
+    throw error;
   }
+}
+
 
   /**
    * Insère ou met à jour un utilisateur
@@ -152,9 +193,9 @@ export class SyncService {
     const database = await db;
     
     await database.runAsync(
-      `INSERT OR REPLACE INTO users (id, nom, prenom, email, role, telephone, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [user.id, user.nom, user.prenom || null, user.email, user.role, user.telephone || null, new Date().toISOString()]
+      `INSERT OR REPLACE INTO users (id, nom, prenom, email, role, password, telephone, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [user.id, user.nom, user.prenom || null, user.email, user.role, user.password || null, user.telephone || null, new Date().toISOString()]
     );
   }
 

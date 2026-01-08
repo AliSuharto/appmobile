@@ -2,6 +2,7 @@ import MarchandDetails from '@/app/component/marchands/marchandDetails';
 import MarchandsList from '@/app/component/marchands/marchandsList';
 
 import { Marchand } from '@/app/core/services/marchandService';
+import { StatusBar } from 'expo-status-bar';
 import React, { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -19,6 +20,7 @@ export default function MarchandsScreen() {
 
   return (
     <View style={styles.container}>
+      <StatusBar style="dark" />
       {selectedMarchandId ? (
         <MarchandDetails 
           marchandId={selectedMarchandId}

@@ -5,6 +5,7 @@ import { Platform } from 'react-native';
 
 export default function TabsLayout() {
   return (
+    
     <Tabs
       screenOptions={{
         headerShown: true,
@@ -24,6 +25,7 @@ export default function TabsLayout() {
         },
       }}
     >
+      
       <Tabs.Screen
         name="paiement/index"
         options={{

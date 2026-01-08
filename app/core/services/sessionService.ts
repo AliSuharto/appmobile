@@ -21,6 +21,36 @@ export const sessionService = {
     }
   },
 
+  // Vérifier s'il existe une session ouverte
+  hasOpenSession: async (): Promise<boolean> => {
+    try {
+      return await sessionRepository.hasOpenSession();
+    } catch (error) {
+      console.error('Erreur lors de la vérification de session ouverte:', error);
+      throw new Error('Impossible de vérifier la session ouverte');
+    }
+  },
+
+  // Récupérer la session ouverte
+  getOpenSession: async (): Promise<Session | null> => {
+    try {
+      return await sessionRepository.getOpenSession();
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la session ouverte:', error);
+      throw new Error('Impossible de récupérer la session ouverte');
+    }
+  },
+
+  // Récupérer la session ouverte avec statistiques
+  getOpenSessionWithStats: async (): Promise<SessionWithStats | null> => {
+    try {
+      return await sessionRepository.getOpenSessionWithStats();
+    } catch (error) {
+      console.error('Erreur lors de la récupération de la session ouverte avec stats:', error);
+      throw new Error('Impossible de récupérer la session ouverte');
+    }
+  },
+
   // Récupérer les paiements d'une session
   getSessionPaiements: async (sessionId: number): Promise<PaiementWithMarchand[]> => {
     try {
@@ -112,8 +142,10 @@ export const sessionService = {
   getStatusBadge: (statut: string): { color: string; label: string } => {
     switch (statut.toLowerCase()) {
       case 'active':
-        return { color: 'green', label: 'Active' };
+      case 'ouvert':
+        return { color: 'green', label: 'Ouverte' };
       case 'fermée':
+      case 'fermee':
         return { color: 'gray', label: 'Fermée' };
       case 'en attente':
         return { color: 'yellow', label: 'En attente' };

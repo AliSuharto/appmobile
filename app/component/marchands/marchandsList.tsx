@@ -199,10 +199,10 @@ export default function MarchandsList({ onSelectMarchand }: MarchandsListProps) 
   return (
     <View style={styles.container}>
       {/* En-tête */}
-      <View style={styles.headerContainer}>
+      {/* <View style={styles.headerContainer}>
         <Text style={styles.headerTitle}>👥 Marchands</Text>
         <Text style={styles.headerSubtitle}>{marchands.length} marchand{marchands.length > 1 ? 's' : ''}</Text>
-      </View>
+      </View> */}
 
       {/* Barre de recherche */}
       <View style={styles.searchContainer}>

@@ -62,6 +62,42 @@ export const sessionRepository = {
     return session || null;
   },
 
+  // Vérifier s'il existe une session ouverte
+  hasOpenSession: async (): Promise<boolean> => {
+    const database = await db;
+    const result = await database.getFirstAsync<{ count: number }>(
+      `SELECT COUNT(*) as count FROM sessions WHERE statut = 'OUVERT'`
+    );
+    return (result?.count ?? 0) > 0;
+  },
+
+  // Récupérer la session ouverte (s'il y en a une)
+  getOpenSession: async (): Promise<Session | null> => {
+    const database = await db;
+    const session = await database.getFirstAsync<Session>(
+      `SELECT * FROM sessions WHERE statut = 'OUVERT' ORDER BY date_ouverture DESC LIMIT 1`
+    );
+    return session || null;
+  },
+
+  // Récupérer la session ouverte avec ses statistiques
+  getOpenSessionWithStats: async (): Promise<SessionWithStats | null> => {
+    const database = await db;
+    const session = await database.getFirstAsync<SessionWithStats>(`
+      SELECT 
+        s.*,
+        COALESCE(SUM(p.montant), 0) as total_paiements,
+        COUNT(p.id) as nombre_paiements
+      FROM sessions s
+      LEFT JOIN paiements p ON s.id = p.session_id
+      WHERE s.statut = 'OUVERT'
+      GROUP BY s.id
+      ORDER BY s.date_ouverture DESC
+      LIMIT 1
+    `);
+    return session || null;
+  },
+
   // Récupérer tous les paiements d'une session avec les infos du marchand
   getPaiementsBySessionId: async (sessionId: number): Promise<PaiementWithMarchand[]> => {
     const database = await db;
@@ -104,7 +140,6 @@ export const sessionRepository = {
        VALUES (?, ?, ?, ?, ?, ?, ?)`,
       [
         session.nom,
-        session.montant,
         session.date_ouverture,
         session.date_fermeture,
         session.statut,
@@ -139,8 +174,9 @@ export const sessionRepository = {
   closeSession: async (id: number): Promise<void> => {
     const database = await db;
     await database.runAsync(
-      `UPDATE sessions SET statut = 'fermée', date_fermeture = CURRENT_TIMESTAMP WHERE id = ?`,
+      `UPDATE sessions SET statut = 'FERMEE', date_fermeture = CURRENT_TIMESTAMP WHERE id = ?`,
       [id]
     );
   }
 };
+  

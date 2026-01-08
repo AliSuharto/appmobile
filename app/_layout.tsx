@@ -50,8 +50,8 @@ export default function RootLayout() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }} edges={['top', 'bottom']}>
-      <StatusBar style="auto" animated />
+    <SafeAreaView style={{ flex: 1 }}>
+      <StatusBar style="dark" />
       <ThemeProvider>
         <AuthProvider>
           <RootLayoutNav />

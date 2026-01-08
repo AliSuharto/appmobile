@@ -12,6 +12,7 @@ export const initDatabase = async (): Promise<void> => {
       nom TEXT NOT NULL,
       prenom TEXT NOT NULL,
       email TEXT UNIQUE NOT NULL,
+      password TEXT,
       role TEXT NOT NULL,
       telephone TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -38,7 +39,7 @@ export const initDatabase = async (): Promise<void> => {
     -- Table Sessions
     CREATE TABLE IF NOT EXISTS sessions (
       id INTEGER PRIMARY KEY,
-      nom TEXT NOT NULL,
+      nom TEXT ,
       montant REAL,
       date_ouverture DATETIME ,
       date_fermeture DATETIME,

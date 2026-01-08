@@ -12,8 +12,6 @@ import {
 } from 'react-native';
 import { useAuth } from '../hooks/AuthContext';
 import { useTheme } from '../hooks/useTheme';
-import { BASE_URL_API } from '../utilitaire/api';
-
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -23,36 +21,42 @@ export default function LoginScreen() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    // Validation des champs
     if (!email || !password) {
       Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      return;
+    }
+
+    // Validation basique de l'email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      Alert.alert('Erreur', 'Veuillez entrer une adresse email valide');
       return;
     }
 
     setLoading(true);
 
     try {
-      const response = await fetch(`${BASE_URL_API}/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      const data = await response.json();
-
-      if (!response.ok || !data.success) {
-        throw new Error(data.message || 'Identifiants invalides');
-      }
-
-      const token = data.data?.token;
-      if (!token) {
-        throw new Error('Token manquant dans la réponse');
-      }
-
-      // ✅ Utiliser la fonction login du contexte
-      await login(token, data.data.user);
+      console.log('🔐 Tentative de connexion depuis LoginScreen...');
       
+      // Utiliser la fonction login du contexte
+      const result = await login(email.trim(), password);
+
+      if (!result.success) {
+        Alert.alert('Erreur', result.message || 'Identifiants invalides');
+      } else {
+        // Connexion réussie - la navigation est gérée automatiquement par AuthContext
+        console.log('✅ Connexion réussie, attente de la navigation automatique...');
+        
+        // Optionnel: Afficher un message de succès temporaire
+        Alert.alert('Succès', result.message || 'Connexion réussie');
+      }
     } catch (error: any) {
-      Alert.alert('Erreur', error.message || 'Échec de la connexion');
+      console.error('❌ Erreur lors de la connexion:', error);
+      Alert.alert(
+        'Erreur', 
+        error.message || 'Échec de la connexion. Vérifiez votre connexion internet.'
+      );
     } finally {
       setLoading(false);
     }
@@ -66,6 +70,10 @@ export default function LoginScreen() {
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Connexion
+        </Text>
+
+        <Text style={[styles.subtitle, { color: theme.colors.text + '80' }]}>
+          Première connexion via internet, puis mode hors-ligne disponible
         </Text>
         
         <TextInput
@@ -83,7 +91,9 @@ export default function LoginScreen() {
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
+          autoCorrect={false}
           editable={!loading}
+          returnKeyType="next"
         />
 
         <TextInput
@@ -101,6 +111,8 @@ export default function LoginScreen() {
           onChangeText={setPassword}
           secureTextEntry
           editable={!loading}
+          returnKeyType="done"
+          onSubmitEditing={handleLogin}
         />
 
         <TouchableOpacity
@@ -113,17 +125,38 @@ export default function LoginScreen() {
           disabled={loading}
         >
           {loading ? (
-            <ActivityIndicator color="#fff" />
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator color="#fff" />
+              <Text style={[styles.buttonText, { marginLeft: 12 }]}>
+                Connexion...
+              </Text>
+            </View>
           ) : (
             <Text style={styles.buttonText}>Se connecter</Text>
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.forgotPassword}>
+        <TouchableOpacity 
+          style={styles.forgotPassword}
+          disabled={loading}
+          onPress={() => {
+            Alert.alert(
+              'Mot de passe oublié',
+              'Contactez votre administrateur pour réinitialiser votre mot de passe.'
+            );
+          }}
+        >
           <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>
             Mot de passe oublié ?
           </Text>
         </TouchableOpacity>
+
+        {/* Section d'aide */}
+        <View style={styles.helpContainer}>
+          <Text style={[styles.helpText, { color: theme.colors.text + '60' }]}>
+            💡 Après la première connexion, vous pourrez vous connecter même sans internet
+          </Text>
+        </View>
       </View>
     </KeyboardAvoidingView>
   );
@@ -141,8 +174,14 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    marginBottom: 40,
+    marginBottom: 8,
     textAlign: 'center',
+  },
+  subtitle: {
+    fontSize: 14,
+    marginBottom: 32,
+    textAlign: 'center',
+    lineHeight: 20,
   },
   input: {
     height: 56,
@@ -167,11 +206,25 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: '600',
   },
+  loadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   forgotPassword: {
     marginTop: 16,
     alignItems: 'center',
   },
   forgotPasswordText: {
     fontSize: 14,
+  },
+  helpContainer: {
+    marginTop: 32,
+    padding: 16,
+    alignItems: 'center',
+  },
+  helpText: {
+    fontSize: 12,
+    textAlign: 'center',
+    lineHeight: 18,
   },
 });
