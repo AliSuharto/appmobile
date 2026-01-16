@@ -25,7 +25,16 @@ function RootLayoutNav() {
         headerShown: false,
         contentStyle: { backgroundColor: 'transparent' },
       }}
-    />
+    >
+      {/* Écran de paiement en modal */}
+      <Stack.Screen 
+        name="paiement" 
+        options={{ 
+          presentation: 'modal',
+          headerShown: false,
+        }} 
+      />
+    </Stack>
   );
 }
 
@@ -51,7 +60,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar style="dark" />
+      <StatusBar style="auto" />
       <ThemeProvider>
         <AuthProvider>
           <RootLayoutNav />

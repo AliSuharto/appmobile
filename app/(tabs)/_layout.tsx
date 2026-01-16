@@ -3,6 +3,7 @@ import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import { Platform } from 'react-native';
 
+
 export default function TabsLayout() {
   return (
     
@@ -60,6 +61,8 @@ export default function TabsLayout() {
         }}
       />
 
+    
+
       <Tabs.Screen
         name="profile/index"
         options={{
@@ -69,15 +72,24 @@ export default function TabsLayout() {
           ),
         }}
       />
-      {/* <Tabs.Screen
-        name="synchro/index"
+      <Tabs.Screen
+        name="session/index"
         options={{
-          title: 'Synchronisation',
+          title: 'Session',
           tabBarIcon: ({ color }) => (
-            <Ionicons name="sync-outline" size={24} color={color} />
+            <Ionicons name="time-outline" size={24} color={color} />
           ),
         }}
-      /> */}
+      />
+      <Tabs.Screen
+        name="quittance/index"
+        options={{
+          title: 'Quittance',
+          tabBarIcon: ({ color }) => (
+            <Ionicons name="receipt-outline" size={24} color={color} />
+          ),
+        }}
+      />
     </Tabs>
   );
 }

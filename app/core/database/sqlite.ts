@@ -1,3 +1,3 @@
 import * as SQLite from 'expo-sqlite';
 
-export const db = SQLite.openDatabaseAsync('tand.db');
+export const db = SQLite.openDatabaseAsync('triangle.db');

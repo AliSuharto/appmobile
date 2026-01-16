@@ -90,7 +90,7 @@ export const sessionRepository = {
         COUNT(p.id) as nombre_paiements
       FROM sessions s
       LEFT JOIN paiements p ON s.id = p.session_id
-      WHERE s.statut = 'OUVERT'
+      WHERE s.statut = 'OUVERTE'
       GROUP BY s.id
       ORDER BY s.date_ouverture DESC
       LIMIT 1
