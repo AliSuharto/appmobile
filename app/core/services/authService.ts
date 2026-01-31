@@ -1,8 +1,8 @@
-import { BASE_URL_API } from '@/app/utilitaire/api';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Crypto from 'expo-crypto';
-import { db } from '../database/sqlite';
-import { jwtService } from './jwtService';
+import { BASE_URL_API } from "@/app/utilitaire/api";
+import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Crypto from "expo-crypto";
+import { db } from "../database/sqlite";
+import { jwtService } from "./jwtService";
 
 interface LoginCredentials {
   email: string;
@@ -33,7 +33,7 @@ interface User {
 const hashPasswordLocal = async (password: string): Promise<string> => {
   return await Crypto.digestStringAsync(
     Crypto.CryptoDigestAlgorithm.SHA256,
-    password + 'SALT_LOCAL_2025'
+    password + "SALT_LOCAL_2025",
   );
 };
 
@@ -43,10 +43,12 @@ const hashPasswordLocal = async (password: string): Promise<string> => {
 const hasLocalData = async (): Promise<boolean> => {
   try {
     const database = await db;
-    const result = await database.getAllAsync('SELECT COUNT(*) as count FROM users');
+    const result = await database.getAllAsync(
+      "SELECT COUNT(*) as count FROM users",
+    );
     return (result[0] as any).count > 0;
   } catch (error) {
-    console.error('Erreur vérification données locales:', error);
+    console.error("Erreur vérification données locales:", error);
     return false;
   }
 };
@@ -58,31 +60,33 @@ const hasLocalData = async (): Promise<boolean> => {
  */
 const performInitialSync = async (token: string): Promise<void> => {
   try {
-    console.log('🔄 Début de la synchronisation initiale silencieuse...');
-    
+    console.log("🔄 Début de la synchronisation initiale silencieuse...");
+
     const response = await fetch(`${BASE_URL_API}/public/sync/initial`, {
-      method: 'GET',
+      method: "GET",
       headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'application/json',
+        Authorization: `Bearer ${token}`,
+        "Content-Type": "application/json",
       },
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('❌ Erreur HTTP:', response.status, errorText);
-      throw new Error(`Erreur HTTP lors de la sync initiale: ${response.status}`);
+      console.error("❌ Erreur HTTP:", response.status, errorText);
+      throw new Error(
+        `Erreur HTTP lors de la sync initiale: ${response.status}`,
+      );
     }
 
     const result = await response.json();
-    console.log('📦 Réponse sync/initial reçue');
-    
+    console.log("📦 Réponse sync/initial reçue");
+
     const syncData = result.data || result;
-    
-    if (!syncData || typeof syncData !== 'object') {
-      throw new Error('Structure de réponse invalide');
+
+    if (!syncData || typeof syncData !== "object") {
+      throw new Error("Structure de réponse invalide");
     }
-    
+
     const database = await db;
 
     // 1. Marchés
@@ -91,7 +95,13 @@ const performInitialSync = async (token: string): Promise<void> => {
         await database.runAsync(
           `INSERT OR REPLACE INTO marchees (id, nom, adresse, description, updated_at)
            VALUES (?, ?, ?, ?, ?)`,
-          [marchee.id, marchee.nom, marchee.adresse || null, marchee.description || null, new Date().toISOString()]
+          [
+            marchee.id,
+            marchee.nom,
+            marchee.adresse || null,
+            marchee.description || null,
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.marchees.length} marchés synchronisés`);
@@ -103,7 +113,14 @@ const performInitialSync = async (token: string): Promise<void> => {
         await database.runAsync(
           `INSERT OR REPLACE INTO zones (id, nom, marchee_id, marchee_name, description, updated_at)
            VALUES (?, ?, ?, ?, ?, ?)`,
-          [zone.id, zone.nom, zone.marcheeId, zone.marcheeName || null, zone.description || null, new Date().toISOString()]
+          [
+            zone.id,
+            zone.nom,
+            zone.marcheeId,
+            zone.marcheeName || null,
+            zone.description || null,
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.zones.length} zones synchronisées`);
@@ -124,8 +141,8 @@ const performInitialSync = async (token: string): Promise<void> => {
             hall.nbrPlace || null,
             hall.marcheeId || null,
             hall.zoneId || null,
-            new Date().toISOString()
-          ]
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.halls.length} halls synchronisés`);
@@ -149,8 +166,8 @@ const performInitialSync = async (token: string): Promise<void> => {
             marchand.statutDePaiement || null,
             marchand.etat || null,
             marchand.dateInscription || null,
-            new Date().toISOString()
-          ]
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.marchands.length} marchands synchronisés`);
@@ -165,7 +182,7 @@ const performInitialSync = async (token: string): Promise<void> => {
           [
             place.id,
             place.nom,
-            place.statut || 'disponible',
+            place.statut || "disponible",
             place.dateDebutOccupation || null,
             place.droitannuel || null,
             place.categorie || null,
@@ -173,8 +190,8 @@ const performInitialSync = async (token: string): Promise<void> => {
             place.zoneId || null,
             place.hallId || null,
             place.marchandId || null,
-            new Date().toISOString()
-          ]
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.places.length} places synchronisées`);
@@ -192,11 +209,11 @@ const performInitialSync = async (token: string): Promise<void> => {
             session.montant || null,
             session.dateOuverture,
             session.dateFermeture || null,
-            session.statut || 'active',
+            session.statut || "active",
             session.regisseurPrincipalId || null,
             session.validation_date || null,
-            new Date().toISOString()
-          ]
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.sessions.length} sessions synchronisées`);
@@ -220,8 +237,8 @@ const performInitialSync = async (token: string): Promise<void> => {
             paiement.agentId,
             paiement.dateDebut || null,
             paiement.dateFin || null,
-            new Date().toISOString()
-          ]
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.paiements.length} paiements synchronisés`);
@@ -241,8 +258,8 @@ const performInitialSync = async (token: string): Promise<void> => {
             quittance.etat || null,
             quittance.QuittancePlageId || null,
             quittance.paiementId || null,
-            new Date().toISOString()
-          ]
+            new Date().toISOString(),
+          ],
         );
       }
       console.log(`✅ ${syncData.quittances.length} quittances synchronisées`);
@@ -252,14 +269,20 @@ const performInitialSync = async (token: string): Promise<void> => {
     await database.runAsync(
       `INSERT OR REPLACE INTO sync_metadata (id, last_sync_timestamp, sync_status, error_message)
        VALUES (1, ?, 'success', NULL)`,
-      [syncData.syncTimestamp || new Date().toISOString()]
+      [syncData.syncTimestamp || new Date().toISOString()],
     );
 
-    await AsyncStorage.setItem('last_sync_timestamp', syncData.syncTimestamp || new Date().toISOString());
+    await AsyncStorage.setItem(
+      "last_sync_timestamp",
+      syncData.syncTimestamp || new Date().toISOString(),
+    );
 
-    console.log('✅ Synchronisation initiale silencieuse terminée avec succès');
+    console.log("✅ Synchronisation initiale silencieuse terminée avec succès");
   } catch (error) {
-    console.error('❌ Erreur lors de la synchronisation initiale silencieuse:', error);
+    console.error(
+      "❌ Erreur lors de la synchronisation initiale silencieuse:",
+      error,
+    );
     // Ne pas bloquer la connexion en cas d'échec de sync
   }
 };
@@ -272,35 +295,61 @@ const saveUserLocally = async (user: any, password: string): Promise<void> => {
   try {
     const database = await db;
     const hashedPassword = await hashPasswordLocal(password);
-    
-    console.log('💾 Sauvegarde utilisateur local:', user.email);
-    
+
+    console.log("💾 Sauvegarde utilisateur local:", user.email);
+    console.log("🔐 Hash généré:", hashedPassword.substring(0, 20) + "...");
+
     // Vérifier si l'utilisateur existe déjà
     const existing = await database.getAllAsync(
-      'SELECT id FROM users WHERE email = ?',
-      [user.email]
+      "SELECT id, password FROM users WHERE email = ?",
+      [user.email],
     );
 
     if (existing.length > 0) {
+      const oldPassword = (existing[0] as any).password;
+      console.log(
+        "🔄 Mise à jour - Ancien hash:",
+        oldPassword?.substring(0, 20) + "...",
+      );
+      console.log(
+        "🔄 Mise à jour - Nouveau hash:",
+        hashedPassword.substring(0, 20) + "...",
+      );
+
       // Mise à jour de l'utilisateur existant
       await database.runAsync(
         `UPDATE users 
          SET nom = ?, prenom = ?, password = ?, role = ?, telephone = ?, updated_at = CURRENT_TIMESTAMP
          WHERE email = ?`,
-        [user.nom, user.prenom, hashedPassword, user.role, user.telephone || null, user.email]
+        [
+          user.nom,
+          user.prenom,
+          hashedPassword,
+          user.role,
+          user.telephone || null,
+          user.email,
+        ],
       );
-      console.log('🔄 Utilisateur mis à jour localement:', user.email);
+      console.log("🔄 Utilisateur mis à jour localement:", user.email);
     } else {
       // Insertion d'un nouvel utilisateur
       await database.runAsync(
         `INSERT INTO users (id, nom, prenom, email, password, role, telephone, created_at, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
-        [user.id, user.nom, user.prenom, user.email, hashedPassword, user.role, user.telephone || null]
+        [
+          user.id,
+          user.nom,
+          user.prenom,
+          user.email,
+          hashedPassword,
+          user.role,
+          user.telephone || null,
+        ],
       );
-      console.log('➕ Nouvel utilisateur inséré localement:', user.email);
+      console.log("➕ Nouvel utilisateur inséré localement:", user.email);
     }
   } catch (error) {
-    console.error('❌ Erreur sauvegarde utilisateur local:', error);
+    console.error("❌ Erreur sauvegarde utilisateur local:", error);
     throw error;
   }
 };
@@ -309,15 +358,15 @@ const saveUserLocally = async (user: any, password: string): Promise<void> => {
  * Authentification via l'API distante
  */
 const loginViaAPI = async (
-  credentials: LoginCredentials
+  credentials: LoginCredentials,
 ): Promise<AuthResult> => {
   try {
-    console.log('🌐 Tentative de connexion via API:', credentials.email);
+    console.log("🌐 Tentative de connexion via API:", credentials.email);
 
     const response = await fetch(`${BASE_URL_API}/auth/login`, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
         email: credentials.email,
@@ -326,13 +375,13 @@ const loginViaAPI = async (
     });
 
     const apiResponse = await response.json();
-    console.log('🌐 Réponse API reçue:', apiResponse);
+    console.log("🌐 Réponse API reçue:", apiResponse);
 
     // Cas erreur HTTP ou métier
     if (!response.ok || !apiResponse.success) {
       return {
         success: false,
-        message: apiResponse.message || 'Échec de la connexion',
+        message: apiResponse.message || "Échec de la connexion",
       };
     }
 
@@ -342,7 +391,7 @@ const loginViaAPI = async (
     if (!authData?.token || !authData?.user) {
       return {
         success: false,
-        message: 'Réponse serveur invalide (token ou utilisateur manquant)',
+        message: "Réponse serveur invalide (token ou utilisateur manquant)",
       };
     }
 
@@ -353,14 +402,19 @@ const loginViaAPI = async (
 
     // Sauvegarde utilisateur locale avec le mot de passe haché localement
     await saveUserLocally(user, credentials.password);
-    console.log('✅ Utilisateur sauvegardé localement');
+    console.log("✅ Utilisateur sauvegardé localement");
 
     // Lancer la synchronisation initiale silencieuse en arrière-plan si c'est la première connexion
     if (isFirstLogin) {
-      console.log('🎯 Première connexion détectée - Lancement de la sync initiale silencieuse');
+      console.log(
+        "🎯 Première connexion détectée - Lancement de la sync initiale silencieuse",
+      );
       // Ne pas attendre la fin de la sync pour ne pas bloquer la connexion
-      performInitialSync(token).catch(err => {
-        console.error('⚠️ La synchronisation initiale a échoué mais la connexion est maintenue:', err);
+      performInitialSync(token).catch((err) => {
+        console.error(
+          "⚠️ La synchronisation initiale a échoué mais la connexion est maintenue:",
+          err,
+        );
       });
     }
 
@@ -368,16 +422,15 @@ const loginViaAPI = async (
       success: true,
       token,
       user,
-      message: apiResponse.message || 'Connexion réussie',
+      message: apiResponse.message || "Connexion réussie",
     };
-
   } catch (error: any) {
-    console.error('❌ Erreur connexion API:', error);
+    console.error("❌ Erreur connexion API:", error);
 
     return {
       success: false,
       message:
-        'Impossible de se connecter au serveur. Vérifiez votre connexion internet.',
+        "Impossible de se connecter au serveur. Vérifiez votre connexion internet.",
     };
   }
 };
@@ -386,35 +439,61 @@ const loginViaAPI = async (
  * Authentification via la base de données locale
  * Utilisée en mode hors-ligne ou quand l'utilisateur a déjà été synchronisé
  */
-const loginViaLocal = async (credentials: LoginCredentials): Promise<AuthResult> => {
+const loginViaLocal = async (
+  credentials: LoginCredentials,
+): Promise<AuthResult> => {
   try {
-    console.log('💾 Tentative de connexion locale:', credentials.email);
-    
+    console.log("💾 Tentative de connexion locale:", credentials.email);
+
     const database = await db;
-    const hashedPassword = await hashPasswordLocal(credentials.password);
-    
-    const result = await database.getAllAsync(
-      `SELECT id, nom, prenom, email, role, telephone 
+
+    // 🔍 D'ABORD : Récupérer l'utilisateur avec son password
+    const userResult = await database.getAllAsync(
+      `SELECT id, nom, prenom, email, role, telephone, password 
        FROM users 
-       WHERE email = ? AND password = ?`,
-      [credentials.email, hashedPassword]
+       WHERE email = ?`,
+      [credentials.email],
     );
 
-    if (result.length === 0) {
+    if (userResult.length === 0) {
+      console.log("❌ Aucun utilisateur trouvé avec cet email");
       return {
         success: false,
-        message: 'Identifiants incorrects',
+        message: "Identifiants incorrects",
       };
     }
 
-    const user = result[0] as User;
-    
+    const user = userResult[0] as User & { password: string };
+
+    // 🔍 DEBUG : Calculer et comparer les hashs
+    const hashedPassword = await hashPasswordLocal(credentials.password);
+
+    console.log("🔐 Email recherché:", credentials.email);
+    console.log(
+      "🔐 Password stocké (DB):",
+      user.password?.substring(0, 20) + "...",
+    );
+    console.log(
+      "🔐 Password calculé:",
+      hashedPassword.substring(0, 20) + "...",
+    );
+    console.log("🔐 Match:", hashedPassword === user.password);
+
+    // Vérifier le mot de passe
+    if (hashedPassword !== user.password) {
+      console.log("❌ Mot de passe incorrect");
+      return {
+        success: false,
+        message: "Identifiants incorrects",
+      };
+    }
+
     // Mise à jour de la date de dernière connexion
     await database.runAsync(
-      'UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = ?',
-      [user.id]
+      "UPDATE users SET updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+      [user.id],
     );
-    
+
     // Générer un token local simple
     const token = jwtService.generateToken({
       id: user.id,
@@ -422,19 +501,22 @@ const loginViaLocal = async (credentials: LoginCredentials): Promise<AuthResult>
       role: user.role,
     });
 
-    console.log('✅ Connexion locale réussie:', user.email);
+    console.log("✅ Connexion locale réussie:", user.email);
+
+    // Ne pas retourner le password
+    const { password, ...userWithoutPassword } = user;
 
     return {
       success: true,
       token,
-      user,
-      message: 'Connexion locale réussie',
+      user: userWithoutPassword,
+      message: "Connexion locale réussie",
     };
   } catch (error: any) {
-    console.error('❌ Erreur connexion locale:', error);
+    console.error("❌ Erreur connexion locale:", error);
     return {
       success: false,
-      message: 'Erreur lors de la connexion locale',
+      message: "Erreur lors de la connexion locale",
     };
   }
 };
@@ -448,41 +530,74 @@ const login = async (credentials: LoginCredentials): Promise<AuthResult> => {
   try {
     // Vérifier si des données locales existent
     const hasLocal = await hasLocalData();
-    
+
     if (!hasLocal) {
       // Première connexion : authentification via API obligatoire (+ sync silencieuse automatique)
-      console.log('🆕 Première connexion détectée : authentification via API');
+      console.log("🆕 Première connexion détectée : authentification via API");
       return await loginViaAPI(credentials);
-    } 
-    else {
+    } else {
       // Données locales existent : essayer connexion locale d'abord
-      console.log('📂 Données locales trouvées : tentative de connexion locale');
+      console.log(
+        "📂 Données locales trouvées : tentative de connexion locale",
+      );
       const localResult = await loginViaLocal(credentials);
-       
+
       if (localResult.success) {
         // Succès en local
         return localResult;
       }
-      
+
       // Échec local : peut-être que le mot de passe a changé sur le serveur
-      console.log('🔄 Échec connexion locale, tentative via API');
+      console.log("🔄 Échec connexion locale, tentative via API");
       const apiResult = await loginViaAPI(credentials);
-      
+
       if (apiResult.success) {
         // Le mot de passe a changé, les données locales ont été mises à jour
-        console.log('🔑 Mot de passe mis à jour depuis le serveur');
+        console.log("🔑 Mot de passe mis à jour depuis le serveur");
       }
-      
+
       return apiResult;
     }
   } catch (error: any) {
-    console.error('💥 Erreur critique lors de la connexion:', error);
+    console.error("💥 Erreur critique lors de la connexion:", error);
     return {
       success: false,
-      message: 'Erreur inattendue lors de la connexion',
+      message: "Erreur inattendue lors de la connexion",
     };
   }
 };
+
+// const login = async (credentials: LoginCredentials): Promise<AuthResult> => {
+//   try {
+//     const hasLocal = await hasLocalData();
+
+//     if (!hasLocal) {
+//       // 🆕 Première connexion → API obligatoire
+//       console.log("🆕 Première connexion : authentification via API");
+//       return await loginViaAPI(credentials);
+//     }
+
+//     // 📂 Données locales → connexion STRICTEMENT locale
+//     console.log("📂 Connexion locale exclusive");
+
+//     const localResult = await loginViaLocal(credentials);
+
+//     if (!localResult.success) {
+//       return {
+//         success: false,
+//         message: "Identifiants incorrects (mode hors-ligne)",
+//       };
+//     }
+
+//     return localResult;
+//   } catch (error: any) {
+//     console.error("💥 Erreur critique lors de la connexion:", error);
+//     return {
+//       success: false,
+//       message: "Erreur inattendue lors de la connexion",
+//     };
+//   }
+// };
 
 /**
  * Vérification du token
@@ -491,28 +606,28 @@ const login = async (credentials: LoginCredentials): Promise<AuthResult> => {
 const verifyToken = async (token: string): Promise<AuthResult> => {
   try {
     // Récupérer les données utilisateur stockées
-    const userData = await AsyncStorage.getItem('userData');
-    
+    const userData = await AsyncStorage.getItem("userData");
+
     if (!userData) {
       return {
         success: false,
-        message: 'Session expirée',
+        message: "Session expirée",
       };
     }
-    
+
     const user = JSON.parse(userData);
-    
+
     // Vérifier que l'utilisateur existe toujours en local
     const database = await db;
     const result = await database.getAllAsync(
-      'SELECT id, nom, prenom, email, role, telephone FROM users WHERE id = ?',
-      [user.id]
+      "SELECT id, nom, prenom, email, role, telephone FROM users WHERE id = ?",
+      [user.id],
     );
-    
+
     if (result.length === 0) {
       return {
         success: false,
-        message: 'Utilisateur introuvable',
+        message: "Utilisateur introuvable",
       };
     }
 
@@ -520,13 +635,13 @@ const verifyToken = async (token: string): Promise<AuthResult> => {
       success: true,
       user: result[0],
       token,
-      message: 'Token valide',
+      message: "Token valide",
     };
   } catch (error) {
-    console.error('❌ Erreur vérification token:', error);
+    console.error("❌ Erreur vérification token:", error);
     return {
       success: false,
-      message: 'Token invalide',
+      message: "Token invalide",
     };
   }
 };
@@ -535,31 +650,34 @@ const verifyToken = async (token: string): Promise<AuthResult> => {
  * Synchronisation manuelle forcée
  * À appeler explicitement quand l'utilisateur veut synchroniser
  */
-const syncWithAPI = async (email: string, password: string): Promise<AuthResult> => {
+const syncWithAPI = async (
+  email: string,
+  password: string,
+): Promise<AuthResult> => {
   try {
-    console.log('🔄 Synchronisation manuelle demandée...');
+    console.log("🔄 Synchronisation manuelle demandée...");
     const result = await loginViaAPI({ email, password });
-    
+
     if (result.success) {
       const database = await db;
       await database.runAsync(
         `UPDATE sync_metadata 
          SET last_sync_timestamp = ?, sync_status = 'success', error_message = NULL 
          WHERE id = 1`,
-        [new Date().toISOString()]
+        [new Date().toISOString()],
       );
-      
+
       return {
         success: true,
-        message: '✅ Synchronisation réussie',
+        message: "✅ Synchronisation réussie",
       };
     }
-    
+
     return result;
   } catch (error: any) {
     return {
       success: false,
-      message: '❌ Erreur de synchronisation',
+      message: "❌ Erreur de synchronisation",
     };
   }
 };
@@ -567,13 +685,17 @@ const syncWithAPI = async (email: string, password: string): Promise<AuthResult>
 /**
  * Obtenir l'état de la dernière synchronisation
  */
-const getSyncStatus = async (): Promise<{ lastSync: string; status: string; error?: string } | null> => {
+const getSyncStatus = async (): Promise<{
+  lastSync: string;
+  status: string;
+  error?: string;
+} | null> => {
   try {
     const database = await db;
     const result = await database.getAllAsync(
-      'SELECT last_sync_timestamp, sync_status, error_message FROM sync_metadata WHERE id = 1'
+      "SELECT last_sync_timestamp, sync_status, error_message FROM sync_metadata WHERE id = 1",
     );
-    
+
     if (result.length > 0) {
       const row = result[0] as any;
       return {
@@ -582,10 +704,10 @@ const getSyncStatus = async (): Promise<{ lastSync: string; status: string; erro
         error: row.error_message,
       };
     }
-    
+
     return null;
   } catch (error) {
-    console.error('❌ Erreur récupération statut sync:', error);
+    console.error("❌ Erreur récupération statut sync:", error);
     return null;
   }
 };
@@ -596,10 +718,10 @@ const getSyncStatus = async (): Promise<{ lastSync: string; status: string; erro
 const clearLocalData = async (): Promise<void> => {
   try {
     const database = await db;
-    await database.runAsync('DELETE FROM users');
-    console.log('🗑️ Données utilisateur locales supprimées');
+    await database.runAsync("DELETE FROM users");
+    console.log("🗑️ Données utilisateur locales supprimées");
   } catch (error) {
-    console.error('❌ Erreur suppression données locales:', error);
+    console.error("❌ Erreur suppression données locales:", error);
   }
 };
 

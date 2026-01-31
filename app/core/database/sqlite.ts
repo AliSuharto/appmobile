@@ -1,3 +1,3 @@
-import * as SQLite from 'expo-sqlite';
+import * as SQLite from "expo-sqlite";
 
-export const db = SQLite.openDatabaseAsync('triangle.db');
+export const db = SQLite.openDatabaseAsync("bonw.db");

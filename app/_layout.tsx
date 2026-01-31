@@ -1,19 +1,21 @@
-import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, View } from 'react-native';
-import 'react-native-get-random-values';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { initDatabase } from './core/database/migration';
-import { AuthProvider, useAuth } from './hooks/AuthContext';
-import { ThemeProvider } from './hooks/ThemeContext';
+import { Stack } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, View } from "react-native";
+import "react-native-get-random-values";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { initDatabase } from "./core/database/migration";
+import { AuthProvider, useAuth } from "./hooks/AuthContext";
+import { ThemeProvider } from "./hooks/ThemeContext";
 
 function RootLayoutNav() {
   const { isLoading } = useAuth();
 
   if (isLoading) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#fff' }}>
+      <View
+      // style={{ flex: 1, justifyContent: "center", backgroundColor: "#fff" }}
+      >
         <ActivityIndicator size="large" />
       </View>
     );
@@ -23,17 +25,12 @@ function RootLayoutNav() {
     <Stack
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: 'transparent' },
+        contentStyle: { backgroundColor: "transparent" },
       }}
     >
-      {/* Écran de paiement en modal */}
-      <Stack.Screen 
-        name="paiement" 
-        options={{ 
-          presentation: 'modal',
-          headerShown: false,
-        }} 
-      />
+      <Stack.Screen name="(auth)/login" />
+      <Stack.Screen name="(tabs)/_layout" />
+      <Stack.Screen name="(modals)/_layout" />
     </Stack>
   );
 }
@@ -45,22 +42,25 @@ export default function RootLayout() {
     initDatabase()
       .then(() => setIsReady(true))
       .catch((error) => {
-        console.error('Database init error:', error);
+        console.error("Database init error:", error);
         setIsReady(true);
       });
   }, []);
 
   if (!isReady) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', backgroundColor: '#fff' }}>
+      <View
+      // style={{ flex: 1, justifyContent: "center", backgroundColor: "#fff" }}
+      >
         <ActivityIndicator size="large" />
       </View>
     );
   }
 
   return (
-    <SafeAreaView style={{ flex: 1 }}>
-      <StatusBar style="auto" />
+    <SafeAreaView style={{ flex: 1 }} edges={["bottom", "left", "right"]}>
+      {/* edges={['bottom', 'left', 'right']} = pas de padding en haut */}
+      <StatusBar style="dark" />
       <ThemeProvider>
         <AuthProvider>
           <RootLayoutNav />

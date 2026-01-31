@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import { StatusBar } from "expo-status-bar";
+import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
@@ -9,53 +10,56 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-} from 'react-native';
-import { useAuth } from '../hooks/AuthContext';
-import { useTheme } from '../hooks/useTheme';
+} from "react-native";
+import { useAuth } from "../hooks/AuthContext";
+import { useTheme } from "../hooks/useTheme";
 
 export default function LoginScreen() {
   const { login } = useAuth();
   const theme = useTheme();
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     // Validation des champs
     if (!email || !password) {
-      Alert.alert('Erreur', 'Veuillez remplir tous les champs');
+      Alert.alert("Erreur", "Veuillez remplir tous les champs");
       return;
     }
 
     // Validation basique de l'email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
-      Alert.alert('Erreur', 'Veuillez entrer une adresse email valide');
+      Alert.alert("Erreur", "Veuillez entrer une adresse email valide");
       return;
     }
 
     setLoading(true);
 
     try {
-      console.log('🔐 Tentative de connexion depuis LoginScreen...');
-      
+      console.log("🔐 Tentative de connexion depuis LoginScreen...");
+
       // Utiliser la fonction login du contexte
       const result = await login(email.trim(), password);
 
       if (!result.success) {
-        Alert.alert('Erreur', result.message || 'Identifiants invalides');
+        Alert.alert("Erreur", result.message || "Identifiants invalides");
       } else {
         // Connexion réussie - la navigation est gérée automatiquement par AuthContext
-        console.log('✅ Connexion réussie, attente de la navigation automatique...');
-        
+        console.log(
+          "✅ Connexion réussie, attente de la navigation automatique...",
+        );
+
         // Optionnel: Afficher un message de succès temporaire
-        Alert.alert('Succès', result.message || 'Connexion réussie');
+        Alert.alert("Succès", result.message || "Connexion réussie");
       }
     } catch (error: any) {
-      console.error('❌ Erreur lors de la connexion:', error);
+      console.error("❌ Erreur lors de la connexion:", error);
       Alert.alert(
-        'Erreur', 
-        error.message || 'Échec de la connexion. Vérifiez votre connexion internet.'
+        "Erreur",
+        error.message ||
+          "Échec de la connexion. Vérifiez votre connexion internet.",
       );
     } finally {
       setLoading(false);
@@ -65,17 +69,18 @@ export default function LoginScreen() {
   return (
     <KeyboardAvoidingView
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
     >
+      <StatusBar style="light" />
       <View style={styles.content}>
         <Text style={[styles.title, { color: theme.colors.text }]}>
           Connexion
         </Text>
 
-        <Text style={[styles.subtitle, { color: theme.colors.text + '80' }]}>
+        <Text style={[styles.subtitle, { color: theme.colors.text + "80" }]}>
           Première connexion via internet, puis mode hors-ligne disponible
         </Text>
-        
+
         <TextInput
           style={[
             styles.input,
@@ -86,7 +91,7 @@ export default function LoginScreen() {
             },
           ]}
           placeholder="Email"
-          placeholderTextColor={theme.colors.text + '80'}
+          placeholderTextColor={theme.colors.text + "80"}
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
@@ -106,7 +111,7 @@ export default function LoginScreen() {
             },
           ]}
           placeholder="Mot de passe"
-          placeholderTextColor={theme.colors.text + '80'}
+          placeholderTextColor={theme.colors.text + "80"}
           value={password}
           onChangeText={setPassword}
           secureTextEntry
@@ -136,25 +141,28 @@ export default function LoginScreen() {
           )}
         </TouchableOpacity>
 
-        <TouchableOpacity 
+        <TouchableOpacity
           style={styles.forgotPassword}
           disabled={loading}
           onPress={() => {
             Alert.alert(
-              'Mot de passe oublié',
-              'Contactez votre administrateur pour réinitialiser votre mot de passe.'
+              "Mot de passe oublié",
+              "Contactez votre administrateur pour réinitialiser votre mot de passe.",
             );
           }}
         >
-          <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>
+          <Text
+            style={[styles.forgotPasswordText, { color: theme.colors.primary }]}
+          >
             Mot de passe oublié ?
           </Text>
         </TouchableOpacity>
 
         {/* Section d'aide */}
         <View style={styles.helpContainer}>
-          <Text style={[styles.helpText, { color: theme.colors.text + '60' }]}>
-            💡 Après la première connexion, vous pourrez vous connecter même sans internet
+          <Text style={[styles.helpText, { color: theme.colors.text + "60" }]}>
+            💡 Après la première connexion, vous pourrez vous connecter même
+            sans internet
           </Text>
         </View>
       </View>
@@ -168,19 +176,19 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
+    justifyContent: "center",
     paddingHorizontal: 24,
   },
   title: {
     fontSize: 32,
-    fontWeight: 'bold',
+    fontWeight: "bold",
     marginBottom: 8,
-    textAlign: 'center',
+    textAlign: "center",
   },
   subtitle: {
     fontSize: 14,
     marginBottom: 32,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 20,
   },
   input: {
@@ -194,25 +202,25 @@ const styles = StyleSheet.create({
   button: {
     height: 56,
     borderRadius: 12,
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: "center",
+    alignItems: "center",
     marginTop: 8,
   },
   buttonDisabled: {
     opacity: 0.6,
   },
   buttonText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 18,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   loadingContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
+    flexDirection: "row",
+    alignItems: "center",
   },
   forgotPassword: {
     marginTop: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   forgotPasswordText: {
     fontSize: 14,
@@ -220,11 +228,11 @@ const styles = StyleSheet.create({
   helpContainer: {
     marginTop: 32,
     padding: 16,
-    alignItems: 'center',
+    alignItems: "center",
   },
   helpText: {
     fontSize: 12,
-    textAlign: 'center',
+    textAlign: "center",
     lineHeight: 18,
   },
 });

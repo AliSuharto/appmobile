@@ -1,40 +1,60 @@
-import { SessionWithStats } from '@/app/core/repositories/sessionRepository';
-import { sessionService } from '@/app/core/services/sessionService';
-import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, FlatList, RefreshControl, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { CreateSessionModal } from './createSessionModal';
-
+import { SessionWithStats } from "@/app/core/repositories/sessionRepository";
+import { sessionService } from "@/app/core/services/sessionService";
+import React, { useEffect, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Animated,
+  FlatList,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { CreateSessionModal } from "./createSessionModal";
 
 interface SessionListProps {
   onSelectSession: (sessionId: number) => void;
 }
 
-type SessionStatus = 'TOUS' | 'OUVERT' | 'EN_VALIDATION' | 'VALIDEE' | 'FERMEE' | 'REJETEE';
+type SessionStatus =
+  | "TOUS"
+  | "OUVERTE"
+  | "EN_VALIDATION"
+  | "VALIDEE"
+  | "FERMEE"
+  | "REJETEE";
 
 const STATUS_FILTERS: { value: SessionStatus; label: string }[] = [
-  { value: 'TOUS', label: 'Tous' },
-  { value: 'OUVERT', label: 'Ouverte' },
-  { value: 'EN_VALIDATION', label: 'En validation' },
-  { value: 'VALIDEE', label: 'Validée' },
-  { value: 'FERMEE', label: 'Fermée' },
-  { value: 'REJETEE', label: 'Rejetée' }
+  { value: "TOUS", label: "Tous" },
+  { value: "OUVERTE", label: "Ouverte" },
+  { value: "EN_VALIDATION", label: "En validation" },
+  { value: "VALIDEE", label: "Validée" },
+  { value: "FERMEE", label: "Fermée" },
+  { value: "REJETEE", label: "Rejetée" },
 ];
 
-export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => {
+export const SessionList: React.FC<SessionListProps> = ({
+  onSelectSession,
+}) => {
   const [sessions, setSessions] = useState<SessionWithStats[]>([]);
-  const [filteredSessions, setFilteredSessions] = useState<SessionWithStats[]>([]);
+  const [filteredSessions, setFilteredSessions] = useState<SessionWithStats[]>(
+    [],
+  );
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  
+
   // Filtres
-  const [searchDate, setSearchDate] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState<SessionStatus>('TOUS');
-  
+  const [searchDate, setSearchDate] = useState("");
+  const [selectedStatus, setSelectedStatus] = useState<SessionStatus>("TOUS");
+
   // État pour le champ de recherche
   const [isSearchExpanded, setIsSearchExpanded] = useState(false);
   const searchWidthAnim = useRef(new Animated.Value(0)).current;
-  
+
   // État pour le modal de création
   const [isCreateModalVisible, setIsCreateModalVisible] = useState(false);
 
@@ -45,7 +65,7 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
       setSessions(data);
       applyFilters(data, searchDate, selectedStatus);
     } catch (err) {
-      setError('Erreur lors du chargement des sessions');
+      setError("Erreur lors du chargement des sessions");
       console.error(err);
     } finally {
       setLoading(false);
@@ -62,7 +82,7 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
     Animated.timing(searchWidthAnim, {
       toValue: isSearchExpanded ? 1 : 0,
       duration: 300,
-      useNativeDriver: false
+      useNativeDriver: false,
     }).start();
   }, [isSearchExpanded]);
 
@@ -70,20 +90,20 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
   const applyFilters = (
     data: SessionWithStats[],
     dateSearch: string,
-    status: SessionStatus
+    status: SessionStatus,
   ) => {
     let filtered = [...data];
 
     // Filtre par date
     if (dateSearch.trim()) {
       filtered = filtered.filter((session) => {
-        const dateOuverture = session.date_ouverture 
-          ? new Date(session.date_ouverture).toLocaleDateString('fr-FR')
-          : '';
+        const dateOuverture = session.date_ouverture
+          ? new Date(session.date_ouverture).toLocaleDateString("fr-FR")
+          : "";
         const dateFermeture = session.date_fermeture
-          ? new Date(session.date_fermeture).toLocaleDateString('fr-FR')
-          : '';
-        
+          ? new Date(session.date_fermeture).toLocaleDateString("fr-FR")
+          : "";
+
         return (
           dateOuverture.includes(dateSearch) ||
           dateFermeture.includes(dateSearch) ||
@@ -93,9 +113,9 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
     }
 
     // Filtre par statut
-    if (status !== 'TOUS') {
+    if (status !== "TOUS") {
       filtered = filtered.filter(
-        (session) => session.statut.toUpperCase() === status
+        (session) => session.statut.toUpperCase() === status,
       );
     }
 
@@ -151,7 +171,12 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
       >
         <View style={styles.sessionHeader}>
           <Text style={styles.sessionName}>{item.nom}</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(statusBadge.color) }]}>
+          <View
+            style={[
+              styles.statusBadge,
+              { backgroundColor: getStatusColor(statusBadge.color) },
+            ]}
+          >
             <Text style={styles.statusText}>{statusBadge.label}</Text>
           </View>
         </View>
@@ -224,7 +249,7 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
               <Text style={styles.searchButtonIcon}>🔍</Text>
               <Text style={styles.searchButtonText}>Rechercher</Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.createButton}
               onPress={() => setIsCreateModalVisible(true)}
@@ -246,7 +271,7 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
             <TouchableOpacity
               style={styles.closeSearchButton}
               onPress={() => {
-                setSearchDate('');
+                setSearchDate("");
                 setIsSearchExpanded(false);
               }}
             >
@@ -268,7 +293,8 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
               key={filter.value}
               style={[
                 styles.statusFilterButton,
-                selectedStatus === filter.value && styles.statusFilterButtonActive
+                selectedStatus === filter.value &&
+                  styles.statusFilterButtonActive,
               ]}
               onPress={() => handleStatusChange(filter.value)}
               activeOpacity={0.7}
@@ -276,7 +302,8 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
               <Text
                 style={[
                   styles.statusFilterText,
-                  selectedStatus === filter.value && styles.statusFilterTextActive
+                  selectedStatus === filter.value &&
+                    styles.statusFilterTextActive,
                 ]}
               >
                 {filter.label}
@@ -298,16 +325,16 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
         }
         contentContainerStyle={[
           styles.listContent,
-          filteredSessions.length === 0 && { flex: 1 }
+          filteredSessions.length === 0 && { flex: 1 },
         ]}
         ListEmptyComponent={
           <View style={styles.centerContainer}>
             <Text style={styles.emptyText}>
-              {searchDate || selectedStatus !== 'TOUS'
-                ? 'Aucune session ne correspond aux filtres'
-                : 'Aucune session disponible'}
+              {searchDate || selectedStatus !== "TOUS"
+                ? "Aucune session ne correspond aux filtres"
+                : "Aucune session disponible"}
             </Text>
-            <Text style={{ color: '#9CA3AF', marginTop: 8 }}>
+            <Text style={{ color: "#9CA3AF", marginTop: 8 }}>
               Glissez vers le bas pour rafraîchir
             </Text>
           </View>
@@ -326,11 +353,11 @@ export const SessionList: React.FC<SessionListProps> = ({ onSelectSession }) => 
 
 const getStatusColor = (color: string): string => {
   const colors: { [key: string]: string } = {
-    green: '#10B981',
-    gray: '#6B7280',
-    yellow: '#F59E0B',
-    blue: '#3B82F6',
-    red: '#EF4444'
+    green: "#10B981",
+    gray: "#6B7280",
+    yellow: "#F59E0B",
+    blue: "#3B82F6",
+    red: "#EF4444",
   };
   return colors[color] || colors.blue;
 };
@@ -338,219 +365,219 @@ const getStatusColor = (color: string): string => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F3F4F6'
+    backgroundColor: "#F3F4F6",
   },
   centerContainer: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20
+    justifyContent: "center",
+    alignItems: "center",
+    padding: 20,
   },
   headerContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingHorizontal: 16,
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12
+    borderBottomColor: "#E5E7EB",
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
   },
   searchButton: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#F3F4F6',
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#F3F4F6",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
-    gap: 8
+    gap: 8,
   },
   searchButtonIcon: {
-    fontSize: 18
+    fontSize: 18,
   },
   searchButtonText: {
     fontSize: 16,
-    color: '#6B7280',
-    fontWeight: '500'
+    color: "#6B7280",
+    fontWeight: "500",
   },
   createButton: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: '#007AFF',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
+    backgroundColor: "#007AFF",
+    justifyContent: "center",
+    alignItems: "center",
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 4
+    elevation: 4,
   },
   createButtonIcon: {
     fontSize: 24,
-    color: '#FFFFFF',
-    fontWeight: '600'
+    color: "#FFFFFF",
+    fontWeight: "600",
   },
   searchExpandedContainer: {
     flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   searchInput: {
     flex: 1,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     borderRadius: 8,
     paddingHorizontal: 16,
     paddingVertical: 12,
     fontSize: 16,
-    color: '#111827'
+    color: "#111827",
   },
   closeSearchButton: {
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: '#E5E7EB',
-    justifyContent: 'center',
-    alignItems: 'center'
+    backgroundColor: "#E5E7EB",
+    justifyContent: "center",
+    alignItems: "center",
   },
   closeSearchIcon: {
     fontSize: 18,
-    color: '#6B7280',
-    fontWeight: '600'
+    color: "#6B7280",
+    fontWeight: "600",
   },
   statusFilterContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     paddingVertical: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB'
+    borderBottomColor: "#E5E7EB",
   },
   statusScrollContent: {
     paddingHorizontal: 16,
-    gap: 8
+    gap: 8,
   },
   statusFilterButton: {
     paddingHorizontal: 16,
     paddingVertical: 8,
     borderRadius: 20,
-    backgroundColor: '#F3F4F6',
+    backgroundColor: "#F3F4F6",
     marginRight: 8,
     borderWidth: 1,
-    borderColor: '#E5E7EB'
+    borderColor: "#E5E7EB",
   },
   statusFilterButtonActive: {
-    backgroundColor: '#007AFF',
-    borderColor: '#007AFF'
+    backgroundColor: "#007AFF",
+    borderColor: "#007AFF",
   },
   statusFilterText: {
     fontSize: 14,
-    fontWeight: '600',
-    color: '#6B7280'
+    fontWeight: "600",
+    color: "#6B7280",
   },
   statusFilterTextActive: {
-    color: '#FFFFFF'
+    color: "#FFFFFF",
   },
   listContent: {
-    padding: 16
+    padding: 16,
   },
   sessionCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3
+    elevation: 3,
   },
   sessionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 12,
   },
   sessionName: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#111827',
-    flex: 1
+    fontWeight: "700",
+    color: "#111827",
+    flex: 1,
   },
   statusBadge: {
     paddingHorizontal: 12,
     paddingVertical: 4,
-    borderRadius: 12
+    borderRadius: 12,
   },
   statusText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 12,
-    fontWeight: '600'
+    fontWeight: "600",
   },
   sessionInfo: {
     marginBottom: 12,
     paddingBottom: 12,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB'
+    borderBottomColor: "#E5E7EB",
   },
   infoRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 6
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginBottom: 6,
   },
   infoLabel: {
     fontSize: 14,
-    color: '#6B7280',
-    fontWeight: '500'
+    color: "#6B7280",
+    fontWeight: "500",
   },
   infoValue: {
     fontSize: 14,
-    color: '#111827',
-    fontWeight: '600'
+    color: "#111827",
+    fontWeight: "600",
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around'
+    flexDirection: "row",
+    justifyContent: "space-around",
   },
   statBox: {
-    alignItems: 'center'
+    alignItems: "center",
   },
   statValue: {
     fontSize: 20,
-    fontWeight: '700',
-    color: '#007AFF',
-    marginBottom: 4
+    fontWeight: "700",
+    color: "#007AFF",
+    marginBottom: 4,
   },
   statLabel: {
     fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500'
+    color: "#6B7280",
+    fontWeight: "500",
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#6B7280'
+    color: "#6B7280",
   },
   errorText: {
     fontSize: 16,
-    color: '#EF4444',
-    textAlign: 'center',
-    marginBottom: 16
+    color: "#EF4444",
+    textAlign: "center",
+    marginBottom: 16,
   },
   emptyText: {
     fontSize: 16,
-    color: '#6B7280',
-    textAlign: 'center'
+    color: "#6B7280",
+    textAlign: "center",
   },
   retryButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
     paddingHorizontal: 24,
     paddingVertical: 12,
-    borderRadius: 8
+    borderRadius: 8,
   },
   retryButtonText: {
-    color: '#FFFFFF',
+    color: "#FFFFFF",
     fontSize: 16,
-    fontWeight: '600'
-  }
+    fontWeight: "600",
+  },
 });

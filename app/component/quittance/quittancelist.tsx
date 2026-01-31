@@ -1,17 +1,30 @@
-import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Quittance } from '../../core/repositories/quittanceRepository';
-import { quittanceService } from '../../core/services/quittanceService';
+import React, { useEffect, useState } from "react";
+import {
+  ActivityIndicator,
+  FlatList,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from "react-native";
+import { Quittance } from "../../core/repositories/quittanceRepository";
+import { quittanceService } from "../../core/services/quittanceService";
 
 interface QuittancesListProps {
   onSelectQuittance: (quittanceId: number) => void;
 }
 
-export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittance }) => {
+export const QuittancesList: React.FC<QuittancesListProps> = ({
+  onSelectQuittance,
+}) => {
   const [quittances, setQuittances] = useState<Quittance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'TOUS' | 'DISPONIBLE' | 'UTILISE'>('TOUS');
+  const [refreshing, setRefreshing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState<
+    "TOUS" | "DISPONIBLE" | "UTILISE"
+  >("TOUS");
   const [stats, setStats] = useState({ total: 0, disponibles: 0, utilises: 0 });
 
   useEffect(() => {
@@ -23,21 +36,35 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
     try {
       setLoading(true);
       const filters: any = {};
-      
-      if (selectedFilter !== 'TOUS') {
+
+      if (selectedFilter !== "TOUS") {
         filters.etat = selectedFilter;
       }
-      
-      if (searchQuery.trim() !== '') {
+
+      if (searchQuery.trim() !== "") {
         filters.searchQuery = searchQuery;
       }
 
       const data = await quittanceService.getAllQuittances(filters);
       setQuittances(data);
     } catch (error) {
-      console.error('Erreur chargement quittances:', error);
+      console.error("Erreur chargement quittances:", error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const onRefresh = async () => {
+    try {
+      setRefreshing(true);
+      console.log("🔄 Refresh déclenché");
+
+      await loadQuittances();
+      await loadStats();
+    } catch (error) {
+      console.error("Erreur refresh:", error);
+    } finally {
+      setRefreshing(false);
     }
   };
 
@@ -46,7 +73,7 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
       const statsData = await quittanceService.getStatistiques();
       setStats(statsData);
     } catch (error) {
-      console.error('Erreur chargement statistiques:', error);
+      console.error("Erreur chargement statistiques:", error);
     }
   };
 
@@ -57,14 +84,18 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
     >
       <View style={styles.cardHeader}>
         <Text style={styles.quittanceName}>{item.nom}</Text>
-        <View style={[
-          styles.badge,
-          item.etat === 'DISPONIBLE' ? styles.badgeDisponible : styles.badgeUtilise
-        ]}>
+        <View
+          style={[
+            styles.badge,
+            item.etat === "DISPONIBLE"
+              ? styles.badgeDisponible
+              : styles.badgeUtilise,
+          ]}
+        >
           <Text style={styles.badgeText}>{item.etat}</Text>
         </View>
       </View>
-      
+
       <View style={styles.cardDetails}>
         <Text style={styles.detailLabel}>Créée le:</Text>
         <Text style={styles.detailValue}>
@@ -92,11 +123,15 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
           <Text style={styles.statLabel}>Total</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, styles.statDisponible]}>{stats.disponibles}</Text>
+          <Text style={[styles.statNumber, styles.statDisponible]}>
+            {stats.disponibles}
+          </Text>
           <Text style={styles.statLabel}>Disponibles</Text>
         </View>
         <View style={styles.statCard}>
-          <Text style={[styles.statNumber, styles.statUtilise]}>{stats.utilises}</Text>
+          <Text style={[styles.statNumber, styles.statUtilise]}>
+            {stats.utilises}
+          </Text>
           <Text style={styles.statLabel}>Utilisées</Text>
         </View>
       </View>
@@ -111,19 +146,21 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
 
       {/* Filtres */}
       <View style={styles.filterContainer}>
-        {(['TOUS', 'DISPONIBLE', 'UTILISE'] as const).map((filter) => (
+        {(["TOUS", "DISPONIBLE", "UTILISE"] as const).map((filter) => (
           <TouchableOpacity
             key={filter}
             style={[
               styles.filterButton,
-              selectedFilter === filter && styles.filterButtonActive
+              selectedFilter === filter && styles.filterButtonActive,
             ]}
             onPress={() => setSelectedFilter(filter)}
           >
-            <Text style={[
-              styles.filterButtonText,
-              selectedFilter === filter && styles.filterButtonTextActive
-            ]}>
+            <Text
+              style={[
+                styles.filterButtonText,
+                selectedFilter === filter && styles.filterButtonTextActive,
+              ]}
+            >
               {filter}
             </Text>
           </TouchableOpacity>
@@ -139,6 +176,8 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
           renderItem={renderQuittanceItem}
           keyExtractor={(item) => item.id.toString()}
           contentContainerStyle={styles.listContainer}
+          refreshing={refreshing}
+          onRefresh={onRefresh}
           ListEmptyComponent={
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyText}>Aucune quittance trouvée</Text>
@@ -153,46 +192,46 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({ onSelectQuittanc
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: "#f5f5f5",
   },
   statsContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
+    flexDirection: "row",
+    justifyContent: "space-around",
     padding: 15,
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     marginBottom: 10,
   },
   statCard: {
-    alignItems: 'center',
+    alignItems: "center",
   },
   statNumber: {
     fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
   },
   statDisponible: {
-    color: '#4CAF50',
+    color: "#4CAF50",
   },
   statUtilise: {
-    color: '#FF9800',
+    color: "#FF9800",
   },
   statLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
     marginTop: 4,
   },
   searchInput: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     margin: 15,
     marginBottom: 10,
     padding: 12,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: "#ddd",
     fontSize: 16,
   },
   filterContainer: {
-    flexDirection: 'row',
+    flexDirection: "row",
     paddingHorizontal: 15,
     marginBottom: 15,
     gap: 10,
@@ -203,44 +242,44 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#007AFF',
-    alignItems: 'center',
+    borderColor: "#007AFF",
+    alignItems: "center",
   },
   filterButtonActive: {
-    backgroundColor: '#007AFF',
+    backgroundColor: "#007AFF",
   },
   filterButtonText: {
-    color: '#007AFF',
+    color: "#007AFF",
     fontSize: 14,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   filterButtonTextActive: {
-    color: '#fff',
+    color: "#fff",
   },
   listContainer: {
     padding: 15,
   },
   quittanceCard: {
-    backgroundColor: '#fff',
+    backgroundColor: "#fff",
     borderRadius: 10,
     padding: 15,
     marginBottom: 10,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
   },
   cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 10,
   },
   quittanceName: {
     fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333',
+    fontWeight: "bold",
+    color: "#333",
     flex: 1,
   },
   badge: {
@@ -249,38 +288,38 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   badgeDisponible: {
-    backgroundColor: '#4CAF50',
+    backgroundColor: "#4CAF50",
   },
   badgeUtilise: {
-    backgroundColor: '#FF9800',
+    backgroundColor: "#FF9800",
   },
   badgeText: {
-    color: '#fff',
+    color: "#fff",
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: "600",
   },
   cardDetails: {
     marginTop: 5,
   },
   detailLabel: {
     fontSize: 12,
-    color: '#666',
+    color: "#666",
   },
   detailValue: {
     fontSize: 14,
-    color: '#333',
+    color: "#333",
     marginTop: 2,
   },
   loader: {
     marginTop: 50,
   },
   emptyContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     paddingVertical: 50,
   },
   emptyText: {
     fontSize: 16,
-    color: '#999',
+    color: "#999",
   },
 });

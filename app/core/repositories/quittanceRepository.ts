@@ -1,11 +1,11 @@
-import { db } from '../database/sqlite';
+import { db } from "../database/sqlite";
 
 export interface Quittance {
   id: number;
   creation_date: string;
   date_utilisation: string | null;
   nom: string;
-  etat: 'DISPONIBLE' | 'UTILISE';
+  etat: "DISPONIBLE" | "UTILISE";
   quittance_plage_id: number | null;
   paiement_id: number | null;
   created_at: string;
@@ -29,7 +29,7 @@ export const quittanceRepository = {
    * Récupérer toutes les quittances avec filtres optionnels
    */
   async getAll(filters?: {
-    etat?: 'DISPONIBLE' | 'UTILISE';
+    etat?: "DISPONIBLE" | "UTILISE";
     searchQuery?: string;
   }): Promise<Quittance[]> {
     const database = await db;
@@ -84,7 +84,9 @@ export const quittanceRepository = {
   /**
    * Créer une nouvelle quittance
    */
-  async create(quittance: Omit<Quittance, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
+  async create(
+    quittance: Omit<Quittance, "id" | "created_at" | "updated_at">,
+  ): Promise<number> {
     const database = await db;
     const result = await database.runAsync(
       `INSERT INTO quittances (creation_date, date_utilisation, nom, etat, quittance_plage_id, paiement_id)
@@ -96,7 +98,7 @@ export const quittanceRepository = {
         quittance.etat,
         quittance.quittance_plage_id,
         quittance.paiement_id,
-      ]
+      ],
     );
     return result.lastInsertRowId;
   },
@@ -104,7 +106,10 @@ export const quittanceRepository = {
   /**
    * Mettre à jour une quittance
    */
-  async update(id: number, updates: Partial<Omit<Quittance, 'id' | 'created_at'>>): Promise<void> {
+  async update(
+    id: number,
+    updates: Partial<Omit<Quittance, "id" | "created_at">>,
+  ): Promise<void> {
     const database = await db;
     const fields: string[] = [];
     const values: any[] = [];
@@ -116,12 +121,12 @@ export const quittanceRepository = {
 
     if (fields.length === 0) return;
 
-    fields.push('updated_at = CURRENT_TIMESTAMP');
+    fields.push("updated_at = CURRENT_TIMESTAMP");
     values.push(id);
 
     await database.runAsync(
-      `UPDATE quittances SET ${fields.join(', ')} WHERE id = ?`,
-      values
+      `UPDATE quittances SET ${fields.join(", ")} WHERE id = ?`,
+      values,
     );
   },
 
@@ -131,6 +136,83 @@ export const quittanceRepository = {
   async delete(id: number): Promise<void> {
     const database = await db;
     await database.runAsync(`DELETE FROM quittances WHERE id = ?`, [id]);
+  },
+
+  /**
+   * Mettre à jour une quittance après utilisation
+   */
+  async markAsUsed(quittanceId: number, paiementId: number): Promise<boolean> {
+    const database = await db;
+    const now = new Date().toISOString();
+
+    const result = await database.runAsync(
+      `UPDATE quittances SET
+        etat = 'UTILISE',
+        date_utilisation = ?,
+        paiement_id = ?,
+        updated_at = ?
+      WHERE id = ?`,
+      [now, paiementId, now, quittanceId],
+    );
+
+    return result.changes > 0;
+  },
+
+  /**
+   * Récupérer une quittance par ID
+   */
+  async findById(id: number): Promise<Quittance | null> {
+    const database = await db;
+    const quittance = await database.getFirstAsync<Quittance>(
+      `SELECT * FROM quittances WHERE id = ?`,
+      [id],
+    );
+    return quittance || null;
+  },
+
+  async findByName(nom: string): Promise<Quittance[]> {
+    const database = await db;
+
+    const quittance = await database.getAllAsync<Quittance>(
+      `SELECT * FROM quittances WHERE nom = ?`,
+      [nom],
+    );
+
+    return quittance || null;
+  },
+
+  /**
+   * Récupérer une quittance disponible
+   */
+  async findAvailableQuittance(): Promise<Quittance | null> {
+    const database = await db;
+    const quittance = await database.getFirstAsync<Quittance>(
+      `SELECT * FROM quittances WHERE etat = 'DISPONIBLE' ORDER BY id LIMIT 1`,
+    );
+    return quittance || null;
+  },
+
+  /**
+   * Récupérer toutes les quittances disponibles
+   */
+  async findAllAvailable(): Promise<Quittance[]> {
+    const database = await db;
+    const quittances = await database.getAllAsync<Quittance>(
+      `SELECT * FROM quittances WHERE etat = 'DISPONIBLE' ORDER BY nom`,
+    );
+    return quittances;
+  },
+
+  /**
+   * Récupérer la quittance associée à un paiement
+   */
+  async findByPaiementId(paiementId: number): Promise<Quittance | null> {
+    const database = await db;
+    const quittance = await database.getFirstAsync<Quittance>(
+      `SELECT * FROM quittances WHERE paiement_id = ?`,
+      [paiementId],
+    );
+    return quittance || null;
   },
 
   /**
@@ -159,9 +241,9 @@ export const quittanceRepository = {
 
     result.forEach((row) => {
       stats.total += row.count;
-      if (row.etat === 'DISPONIBLE') {
+      if (row.etat === "DISPONIBLE") {
         stats.disponibles = row.count;
-      } else if (row.etat === 'UTILISE') {
+      } else if (row.etat === "UTILISE") {
         stats.utilises = row.count;
       }
     });

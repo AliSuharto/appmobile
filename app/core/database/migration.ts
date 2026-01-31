@@ -1,4 +1,4 @@
-import { db } from './sqlite';
+import { db } from "./sqlite";
 
 export const initDatabase = async (): Promise<void> => {
   const database = await db;
@@ -113,12 +113,14 @@ export const initDatabase = async (): Promise<void> => {
       id INTEGER PRIMARY KEY,
       montant REAL NOT NULL,
       type_paiement TEXT,
-      date_paiement DATETIME DEFAULT CURRENT_TIMESTAMP,
+      date_paiement DATETIME ,
       motif TEXT,
-      marchand_id INTEGER NOT NULL,
+      marchand_id INTEGER ,
+      marchandnom TEXT,
       place_id INTEGER,
       session_id INTEGER NOT NULL,
       agent_id INTEGER NOT NULL,
+      quittance_id INTEGER,
       date_debut TEXT,
       date_fin TEXT,
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
@@ -132,7 +134,7 @@ export const initDatabase = async (): Promise<void> => {
     -- Table Quittances
     CREATE TABLE IF NOT EXISTS quittances (
       id INTEGER PRIMARY KEY,
-      creation_date DATETIME DEFAULT CURRENT_TIMESTAMP,
+      creation_date DATETIME ,
       date_utilisation DATETIME,
       nom TEXT NOT NULL,
       etat TEXT,
@@ -141,6 +143,15 @@ export const initDatabase = async (): Promise<void> => {
       created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       updated_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       FOREIGN KEY (paiement_id) REFERENCES paiements(id) ON DELETE CASCADE
+    );
+     
+    -- Table Notes
+    CREATE TABLE IF NOT EXISTS notes (
+      id INTEGER PRIMARY KEY,
+      title TEXT NOT NULL,
+      content TEXT,
+      created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+      updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
     );
 
     -- Table pour tracker la dernière synchronisation
@@ -166,15 +177,17 @@ export const initDatabase = async (): Promise<void> => {
   `);
 
   // 🔹 Insérer un enregistrement initial dans sync_metadata si nécessaire
-  const existing = await database.getAllSync(`SELECT id FROM sync_metadata WHERE id = 1`);
+  const existing = await database.getAllSync(
+    `SELECT id FROM sync_metadata WHERE id = 1`,
+  );
   if (!existing) {
     await database.runAsync(
       `INSERT INTO sync_metadata (id, last_sync_timestamp, sync_status, error_message)
        VALUES (1, ?, 'success', NULL)`,
-      [new Date().toISOString()]
+      [new Date().toISOString()],
     );
-    console.log('Enregistrement initial de sync_metadata créé');
+    console.log("Enregistrement initial de sync_metadata créé");
   }
 
-  console.log('Base de données initialisée avec succès');
+  console.log("Base de données initialisée avec succès");
 };
