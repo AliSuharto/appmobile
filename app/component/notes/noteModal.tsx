@@ -1,17 +1,18 @@
 import { Ionicons } from "@expo/vector-icons";
 import React, { useEffect, useRef, useState } from "react";
 import {
-    Alert,
-    KeyboardAvoidingView,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { Note } from "../../core/repositories/noteRepository";
 import { noteService } from "../../core/services/noteService";
 
@@ -107,88 +108,96 @@ export default function NoteModal({
       transparent={false}
       onRequestClose={handleClose}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : "height"}
-      >
-        {/* En-tête */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-            <Ionicons name="close" size={28} color="#000" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>
-            {noteToEdit ? "Modifier la note" : "Nouvelle note"}
-          </Text>
-          <TouchableOpacity
-            onPress={handleSave}
-            style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
-            disabled={isSaving}
-          >
-            <Text style={styles.saveButtonText}>
-              {isSaving ? "En cours..." : "Enregistrer"}
-            </Text>
-          </TouchableOpacity>
-        </View>
-
-        <ScrollView
-          style={styles.content}
-          keyboardShouldPersistTaps="handled"
-          showsVerticalScrollIndicator={false}
+      <SafeAreaView style={styles.container} edges={["top"]}>
+        <KeyboardAvoidingView
+          style={styles.container}
+          behavior={Platform.OS === "ios" ? "padding" : "height"}
         >
-          {/* Titre */}
-          <TextInput
-            ref={titleInputRef}
-            style={styles.titleInput}
-            placeholder="Titre"
-            value={title}
-            onChangeText={setTitle}
-            placeholderTextColor="#999"
-            returnKeyType="next"
-            onSubmitEditing={() => contentInputRef.current?.focus()}
-            blurOnSubmit={false}
-          />
+          {/* En-tête */}
+          <View style={styles.header}>
+            <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+              <Ionicons name="close" size={28} color="#000" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              {noteToEdit ? "Modifier la note" : "Nouvelle note"}
+            </Text>
+            <TouchableOpacity
+              onPress={handleSave}
+              style={[styles.saveButton, isSaving && styles.saveButtonDisabled]}
+              disabled={isSaving}
+            >
+              <Text style={styles.saveButtonText}>
+                {isSaving ? "En cours..." : "Enregistrer"}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          {/* Contenu */}
-          <TextInput
-            ref={contentInputRef}
-            style={styles.contentInput}
-            placeholder="Contenu de la note..."
-            value={content}
-            onChangeText={setContent}
-            multiline
-            textAlignVertical="top"
-            placeholderTextColor="#999"
-          />
+          <ScrollView
+            style={styles.content}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Titre */}
+            <TextInput
+              ref={titleInputRef}
+              style={styles.titleInput}
+              placeholder="Titre"
+              value={title}
+              onChangeText={setTitle}
+              placeholderTextColor="#999"
+              returnKeyType="next"
+              onSubmitEditing={() => contentInputRef.current?.focus()}
+              blurOnSubmit={false}
+            />
 
-          {/* Info date pour l'édition */}
-          {noteToEdit && (
-            <View style={styles.infoContainer}>
-              <View style={styles.infoRow}>
-                <Ionicons name="time-outline" size={14} color="#999" />
-                <Text style={styles.infoText}>
-                  Créé le{" "}
-                  {new Date(noteToEdit.created_at).toLocaleDateString("fr-FR", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </Text>
+            {/* Contenu */}
+            <TextInput
+              ref={contentInputRef}
+              style={styles.contentInput}
+              placeholder="Contenu de la note..."
+              value={content}
+              onChangeText={setContent}
+              multiline
+              textAlignVertical="top"
+              placeholderTextColor="#999"
+            />
+
+            {/* Info date pour l'édition */}
+            {noteToEdit && (
+              <View style={styles.infoContainer}>
+                <View style={styles.infoRow}>
+                  <Ionicons name="time-outline" size={14} color="#999" />
+                  <Text style={styles.infoText}>
+                    Créé le{" "}
+                    {new Date(noteToEdit.created_at).toLocaleDateString(
+                      "fr-FR",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    )}
+                  </Text>
+                </View>
+                <View style={styles.infoRow}>
+                  <Ionicons name="create-outline" size={14} color="#999" />
+                  <Text style={styles.infoText}>
+                    Modifié le{" "}
+                    {new Date(noteToEdit.updated_at).toLocaleDateString(
+                      "fr-FR",
+                      {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      },
+                    )}
+                  </Text>
+                </View>
               </View>
-              <View style={styles.infoRow}>
-                <Ionicons name="create-outline" size={14} color="#999" />
-                <Text style={styles.infoText}>
-                  Modifié le{" "}
-                  {new Date(noteToEdit.updated_at).toLocaleDateString("fr-FR", {
-                    day: "2-digit",
-                    month: "short",
-                    year: "numeric",
-                  })}
-                </Text>
-              </View>
-            </View>
-          )}
-        </ScrollView>
-      </KeyboardAvoidingView>
+            )}
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
     </Modal>
   );
 }

@@ -2,13 +2,13 @@ import { Ionicons } from "@expo/vector-icons";
 import { useFocusEffect } from "expo-router";
 import React, { useCallback, useState } from "react";
 import {
-    FlatList,
-    RefreshControl,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  FlatList,
+  RefreshControl,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from "react-native";
 import NoteModal from "../../../component/notes/noteModal";
 import { Note } from "../../../core/repositories/noteRepository";
@@ -140,6 +140,7 @@ export default function NotesScreen() {
         <TextInput
           style={styles.searchInput}
           placeholder="Rechercher des notes..."
+          placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
         />

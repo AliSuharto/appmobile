@@ -140,6 +140,7 @@ export const QuittancesList: React.FC<QuittancesListProps> = ({
       <TextInput
         style={styles.searchInput}
         placeholder="Rechercher une quittance..."
+        placeholderTextColor="#777676"
         value={searchQuery}
         onChangeText={setSearchQuery}
       />

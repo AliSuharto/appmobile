@@ -475,8 +475,8 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
         onClose={() => setReceiptModalVisible(false)}
         payment={completedPayment}
         agentName={agentName}
-        companyName="Votre Entreprise"
-        companyAddress="Adresse de votre entreprise"
+        companyName="CUDS"
+        companyAddress="Antsiranana"
         companyPhone="+261 XX XX XXX XX"
       />
     </>

@@ -289,6 +289,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Nom du marchand *"
+              placeholderTextColor="#a7a6a6"
               value={formData.nomMarchands}
               onChangeText={(text) =>
                 setFormData({ ...formData, nomMarchands: text })
@@ -298,7 +299,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
 
             <TextInput
               style={styles.input}
-              placeholder="Motif (optionnel)"
+              placeholder="Motif *"
+              placeholderTextColor="#a7a6a6"
               value={formData.motif}
               onChangeText={(text) => setFormData({ ...formData, motif: text })}
               editable={!loading}
@@ -307,6 +309,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Montant *"
+              placeholderTextColor="#a7a6a6"
               value={formData.montant}
               keyboardType="numeric"
               onChangeText={(text) =>
@@ -318,6 +321,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
             <TextInput
               style={styles.input}
               placeholder="Numéro de quittance *"
+              placeholderTextColor="#a7a6a6"
               value={formData.numeroQuittance}
               onChangeText={(text) =>
                 setFormData({ ...formData, numeroQuittance: text })
@@ -352,8 +356,8 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         onClose={() => setReceiptModalVisible(false)}
         payment={completedPayment}
         agentName={agentName}
-        companyName="Votre Entreprise"
-        companyAddress="Adresse de votre entreprise"
+        companyName="CUDS"
+        companyAddress="Antsiranana"
         companyPhone="+261 XX XX XXX XX"
       />
     </>

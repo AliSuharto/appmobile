@@ -55,6 +55,7 @@ const PaymentPage = () => {
         <TextInput
           style={styles.searchInput}
           placeholder="Entrer CIN"
+          placeholderTextColor="#838181"
           value={searchText}
           onChangeText={setSearchText}
         />
