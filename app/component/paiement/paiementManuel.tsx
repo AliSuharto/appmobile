@@ -164,6 +164,7 @@ const PaymentModal: React.FC<PaymentModalProps> = ({
         ...apiData,
         agentName: agentName,
         createdAt: apiData.createdAt || new Date().toISOString(),
+        numeroQuittance: apiData.recuNumero,
       };
 
       // 4. Stocker le paiement complété

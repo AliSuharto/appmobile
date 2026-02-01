@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import ReceiptActionsModal from "./receiptActionModal";
 
 interface Props {
   visible: boolean;
@@ -47,9 +48,14 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
 
   const [marchand, setMarchand] = useState<MarchandData | null>(null);
   const [idAgent, setIdAgent] = useState<number | null>(null);
+  const [agentName, setAgentName] = useState<string>("");
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadingMarchand, setLoadingMarchand] = useState(false);
+
+  // État pour le modal d'actions de reçu
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [completedPayment, setCompletedPayment] = useState<any>(null);
 
   const marchandsService = new MarchandsService();
   const { createLocalPaiement } = useLocalPaiement();
@@ -105,6 +111,9 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
       if (userDataString) {
         const userData = JSON.parse(userDataString);
         setIdAgent(userData.id);
+        setAgentName(userData.nom || userData.name || "Agent");
+        console.log("✅ Agent ID chargé:", userData.id);
+        console.log("✅ Agent Name chargé:", userData.nom || userData.name);
       }
 
       const openSession = await sessionService.getOpenSessionWithStats();
@@ -118,6 +127,7 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
       }
 
       setSessionId(openSession.id);
+      console.log("✅ Session chargée:", openSession.id);
     } catch (error: any) {
       Alert.alert("Erreur", error.message);
     }
@@ -145,6 +155,8 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
         idAgent,
       };
 
+      console.log("📤 Envoi du paiement à l'API:", payload);
+
       // 1. Envoyer le paiement à l'API
       const response = await fetch(`${BASE_URL_API}/paiements`, {
         method: "POST",
@@ -166,7 +178,7 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
       // 3. Enregistrer le paiement localement avec le hook
       const localSuccess = await createLocalPaiement(apiData, {
         showSuccessAlert: false, // On affiche notre propre message de succès
-        showErrorAlert: true, // On affiche les erreurs locales
+        showErrorAlert: false,
         onSuccess: (localPaiement) => {
           console.log("✅ Paiement local créé:", localPaiement);
         },
@@ -175,27 +187,86 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
         },
       });
 
-      // 4. Afficher le message de succès global
+      // 4. Préparer les données du paiement pour le reçu
+      const paymentData = {
+        ...apiData,
+        agentName: agentName,
+        nomMarchands: marchand.nom,
+        motif: motif,
+        montant: parseFloat(montant),
+        createdAt: apiData.createdAt || new Date().toISOString(),
+        numeroQuittance: apiData.recuNumero || numeroQuittance,
+      };
+
+      // 5. Stocker le paiement complété
+      setCompletedPayment(paymentData);
+
+      // 6. Afficher le résultat avec option d'ouvrir le modal de reçu
       if (localSuccess) {
-        Alert.alert("Succès", "Paiement effectué et enregistré avec succès", [
-          {
-            text: "OK",
-            onPress: () => {
-              onSuccess?.();
-              onClose();
+        Alert.alert(
+          "Succès",
+          `Paiement effectué avec succès\n\n` +
+            `Marchand: ${marchand.nom}\n` +
+            `Type: ${typePaiement === "droit_place" ? "Droit de place" : "Droit annuel"}\n` +
+            `Montant: ${montant} FCFA\n` +
+            `Quittance: ${numeroQuittance}`,
+          [
+            {
+              text: "Générer le reçu",
+              onPress: () => {
+                // Réinitialiser le formulaire
+                setNumeroQuittance("");
+                setTypePaiement("droit_place");
+
+                // Fermer le modal de paiement
+                onClose();
+
+                // Callback de succès
+                if (onSuccess) {
+                  onSuccess();
+                }
+
+                // Ouvrir le modal d'actions de reçu
+                setReceiptModalVisible(true);
+              },
             },
-          },
-        ]);
+            {
+              text: "Plus tard",
+              style: "cancel",
+              onPress: () => {
+                // Réinitialiser le formulaire
+                setNumeroQuittance("");
+                setTypePaiement("droit_place");
+
+                // Callback de succès
+                if (onSuccess) {
+                  onSuccess();
+                }
+
+                onClose();
+              },
+            },
+          ],
+        );
       } else {
         // Paiement API ok mais local échoué
         Alert.alert(
-          "Succès partiel",
-          "Paiement effectué sur le serveur mais erreur d'enregistrement local",
+          "Avertissement",
+          "Paiement effectué sur le serveur mais erreur d'enregistrement local.\n\n" +
+            `Les données seront synchronisées lors de la prochaine connexion.\n\n` +
+            `Quittance: ${numeroQuittance}\n` +
+            `Montant: ${montant} FCFA`,
           [
             {
               text: "OK",
               onPress: () => {
-                onSuccess?.();
+                setNumeroQuittance("");
+                setTypePaiement("droit_place");
+
+                if (onSuccess) {
+                  onSuccess();
+                }
+
                 onClose();
               },
             },
@@ -203,6 +274,7 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
         );
       }
     } catch (error: any) {
+      console.error("❌ Erreur lors du paiement:", error);
       Alert.alert("Erreur", error.message || "Erreur lors du paiement");
     } finally {
       setLoading(false);
@@ -216,183 +288,198 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
   };
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <View style={styles.modal}>
-          {/* Header */}
-          <View style={styles.header}>
-            <Text style={styles.title}>Effectuer un paiement</Text>
-            <TouchableOpacity style={styles.closeIcon} onPress={handleClose}>
-              <MaterialIcons name="close" size={24} color="#64748b" />
-            </TouchableOpacity>
-          </View>
-
-          {loadingMarchand ? (
-            <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2563eb" />
-              <Text style={styles.loadingText}>Chargement des données...</Text>
+    <>
+      <Modal visible={visible} animationType="slide" transparent>
+        <View style={styles.overlay}>
+          <View style={styles.modal}>
+            {/* Header */}
+            <View style={styles.header}>
+              <Text style={styles.title}>Effectuer un paiement</Text>
+              <TouchableOpacity style={styles.closeIcon} onPress={handleClose}>
+                <MaterialIcons name="close" size={24} color="#64748b" />
+              </TouchableOpacity>
             </View>
-          ) : marchand ? (
-            <ScrollView showsVerticalScrollIndicator={false}>
-              {/* Infos Marchand */}
-              <View style={styles.marchandCard}>
-                <View style={styles.marchandHeader}>
-                  <MaterialIcons name="person" size={24} color="#2563eb" />
-                  <Text style={styles.marchandName}>{marchand.nom}</Text>
-                </View>
 
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>CIN:</Text>
-                  <Text style={styles.infoValue}>{marchand.cin}</Text>
-                </View>
-
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Activité:</Text>
-                  <Text style={styles.infoValue}>{marchand.activite}</Text>
-                </View>
-
-                {marchand.place && (
-                  <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Place:</Text>
-                    <Text style={styles.infoValue}>{marchand.place}</Text>
+            {loadingMarchand ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="large" color="#2563eb" />
+                <Text style={styles.loadingText}>
+                  Chargement des données...
+                </Text>
+              </View>
+            ) : marchand ? (
+              <ScrollView showsVerticalScrollIndicator={false}>
+                {/* Infos Marchand */}
+                <View style={styles.marchandCard}>
+                  <View style={styles.marchandHeader}>
+                    <MaterialIcons name="person" size={24} color="#2563eb" />
+                    <Text style={styles.marchandName}>{marchand.nom}</Text>
                   </View>
-                )}
 
-                {marchand.frequencePaiement && (
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Fréquence:</Text>
-                    <Text style={styles.infoValue}>
-                      {marchand.frequencePaiement}
-                    </Text>
+                    <Text style={styles.infoLabel}>CIN:</Text>
+                    <Text style={styles.infoValue}>{marchand.cin}</Text>
                   </View>
-                )}
-              </View>
 
-              {/* Type de paiement */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>Type de paiement</Text>
-                <View style={styles.radioContainer}>
-                  <TouchableOpacity
-                    style={[
-                      styles.radioOption,
-                      typePaiement === "droit_place" &&
-                        styles.radioOptionActive,
-                    ]}
-                    onPress={() => setTypePaiement("droit_place")}
-                  >
-                    <View style={styles.radioCircle}>
-                      {typePaiement === "droit_place" && (
-                        <View style={styles.radioCircleInner} />
-                      )}
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Activité:</Text>
+                    <Text style={styles.infoValue}>{marchand.activite}</Text>
+                  </View>
+
+                  {marchand.place && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Place:</Text>
+                      <Text style={styles.infoValue}>{marchand.place}</Text>
                     </View>
-                    <Text
-                      style={[
-                        styles.radioText,
-                        typePaiement === "droit_place" &&
-                          styles.radioTextActive,
-                      ]}
-                    >
-                      Droit de place
-                    </Text>
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={[
-                      styles.radioOption,
-                      typePaiement === "droit_annuel" &&
-                        styles.radioOptionActive,
-                    ]}
-                    onPress={() => setTypePaiement("droit_annuel")}
-                  >
-                    <View style={styles.radioCircle}>
-                      {typePaiement === "droit_annuel" && (
-                        <View style={styles.radioCircleInner} />
-                      )}
-                    </View>
-                    <Text
-                      style={[
-                        styles.radioText,
-                        typePaiement === "droit_annuel" &&
-                          styles.radioTextActive,
-                      ]}
-                    >
-                      Droit annuel
-                    </Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
-
-              {/* Montant */}
-              <View style={styles.section}>
-                <Text style={styles.label}>Montant</Text>
-                <View style={styles.inputDisabled}>
-                  <Text style={styles.inputDisabledText}>{montant} FCFA</Text>
-                </View>
-              </View>
-
-              {/* Motif */}
-              <View style={styles.section}>
-                <Text style={styles.label}>Motif</Text>
-                <View style={styles.inputDisabled}>
-                  <Text style={styles.inputDisabledText}>{motif}</Text>
-                </View>
-              </View>
-
-              {/* Numéro de quittance */}
-              <View style={styles.section}>
-                <Text style={styles.label}>Numéro de quittance *</Text>
-                <TextInput
-                  style={styles.input}
-                  value={numeroQuittance}
-                  onChangeText={setNumeroQuittance}
-                  placeholder="Entrer le numéro de quittance"
-                  placeholderTextColor="#94a3b8"
-                />
-              </View>
-
-              {/* Boutons */}
-              <View style={styles.buttonContainer}>
-                <TouchableOpacity
-                  style={styles.payButton}
-                  onPress={handlePaiement}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <>
-                      <MaterialIcons
-                        name="check-circle"
-                        size={20}
-                        color="#fff"
-                      />
-                      <Text style={styles.payButtonText}>
-                        Valider le paiement
-                      </Text>
-                    </>
                   )}
-                </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.cancelButton}
-                  onPress={handleClose}
-                  disabled={loading}
-                >
-                  <Text style={styles.cancelButtonText}>Annuler</Text>
-                </TouchableOpacity>
+                  {marchand.frequencePaiement && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Fréquence:</Text>
+                      <Text style={styles.infoValue}>
+                        {marchand.frequencePaiement}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                {/* Type de paiement */}
+                <View style={styles.section}>
+                  <Text style={styles.sectionTitle}>Type de paiement</Text>
+                  <View style={styles.radioContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.radioOption,
+                        typePaiement === "droit_place" &&
+                          styles.radioOptionActive,
+                      ]}
+                      onPress={() => setTypePaiement("droit_place")}
+                    >
+                      <View style={styles.radioCircle}>
+                        {typePaiement === "droit_place" && (
+                          <View style={styles.radioCircleInner} />
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.radioText,
+                          typePaiement === "droit_place" &&
+                            styles.radioTextActive,
+                        ]}
+                      >
+                        Droit de place
+                      </Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.radioOption,
+                        typePaiement === "droit_annuel" &&
+                          styles.radioOptionActive,
+                      ]}
+                      onPress={() => setTypePaiement("droit_annuel")}
+                    >
+                      <View style={styles.radioCircle}>
+                        {typePaiement === "droit_annuel" && (
+                          <View style={styles.radioCircleInner} />
+                        )}
+                      </View>
+                      <Text
+                        style={[
+                          styles.radioText,
+                          typePaiement === "droit_annuel" &&
+                            styles.radioTextActive,
+                        ]}
+                      >
+                        Droit annuel
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {/* Montant */}
+                <View style={styles.section}>
+                  <Text style={styles.label}>Montant</Text>
+                  <View style={styles.inputDisabled}>
+                    <Text style={styles.inputDisabledText}>{montant} FCFA</Text>
+                  </View>
+                </View>
+
+                {/* Motif */}
+                <View style={styles.section}>
+                  <Text style={styles.label}>Motif</Text>
+                  <View style={styles.inputDisabled}>
+                    <Text style={styles.inputDisabledText}>{motif}</Text>
+                  </View>
+                </View>
+
+                {/* Numéro de quittance */}
+                <View style={styles.section}>
+                  <Text style={styles.label}>Numéro de quittance *</Text>
+                  <TextInput
+                    style={styles.input}
+                    value={numeroQuittance}
+                    onChangeText={setNumeroQuittance}
+                    placeholder="Entrer le numéro de quittance"
+                    placeholderTextColor="#94a3b8"
+                  />
+                </View>
+
+                {/* Boutons */}
+                <View style={styles.buttonContainer}>
+                  <TouchableOpacity
+                    style={styles.payButton}
+                    onPress={handlePaiement}
+                    disabled={loading}
+                  >
+                    {loading ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <>
+                        <MaterialIcons
+                          name="check-circle"
+                          size={20}
+                          color="#fff"
+                        />
+                        <Text style={styles.payButtonText}>
+                          Valider le paiement
+                        </Text>
+                      </>
+                    )}
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.cancelButton}
+                    onPress={handleClose}
+                    disabled={loading}
+                  >
+                    <Text style={styles.cancelButtonText}>Annuler</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            ) : (
+              <View style={styles.errorContainer}>
+                <MaterialIcons name="error-outline" size={48} color="#ef4444" />
+                <Text style={styles.errorText}>
+                  Impossible de charger les données
+                </Text>
               </View>
-            </ScrollView>
-          ) : (
-            <View style={styles.errorContainer}>
-              <MaterialIcons name="error-outline" size={48} color="#ef4444" />
-              <Text style={styles.errorText}>
-                Impossible de charger les données
-              </Text>
-            </View>
-          )}
+            )}
+          </View>
         </View>
-      </View>
-    </Modal>
+      </Modal>
+
+      {/* Modal d'actions de reçu */}
+      <ReceiptActionsModal
+        visible={receiptModalVisible}
+        onClose={() => setReceiptModalVisible(false)}
+        payment={completedPayment}
+        agentName={agentName}
+        companyName="Votre Entreprise"
+        companyAddress="Adresse de votre entreprise"
+        companyPhone="+261 XX XX XXX XX"
+      />
+    </>
   );
 };
 

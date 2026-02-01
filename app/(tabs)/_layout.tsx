@@ -1,26 +1,57 @@
 import { Ionicons, MaterialIcons } from "@expo/vector-icons";
-import { Tabs } from "expo-router";
-import { Platform } from "react-native";
+import { Tabs, usePathname } from "expo-router";
+import { Platform, Text, View } from "react-native";
 import AppHeaderMenu from "./(_menu)/appHeaderMenu";
 
+const getHeaderTitle = (pathname: string): string => {
+  if (pathname.includes("(_menu)/profile")) return "Mon Profil";
+  if (pathname.includes("(_menu)/note")) return "Notes";
+  if (pathname.includes("(_menu)/synchro")) return "Synchronisation";
+  if (pathname.includes("/paiement")) return "Paiement";
+  if (pathname.includes("/marchand")) return "Marchands";
+  if (pathname.includes("/scan")) return "Scanner QR";
+  if (pathname.includes("/profile")) return "Profil";
+  if (pathname.includes("/session")) return "Session";
+  if (pathname.includes("/quittance")) return "Quittance";
+  return "";
+};
+
 export default function TabsLayout() {
+  const pathname = usePathname();
+  const headerTitle = getHeaderTitle(pathname);
+
   return (
     <Tabs
       screenOptions={{
-        headerTitle: "e-GMC",
+        headerTitle: headerTitle,
+        headerTitleAlign: "center", // Titre au centre
         headerStyle: {
           backgroundColor: "#f5f5f5",
-          elevation: 10, // 🔹 Ombre pour Android
-          shadowOpacity: 0.1, // 🔹 Ombre pour iOS
+          elevation: 10,
+          shadowOpacity: 0.1,
           shadowRadius: 3,
           shadowOffset: { width: 0, height: 2 },
         },
         headerTitleStyle: {
-          fontSize: 18,
-          fontWeight: "600",
-          color: "#000",
+          fontSize: 20,
+          fontWeight: "800", // Plus gras (bold = 700, extra-bold = 800)
+          color: "#333",
         },
-        headerRight: () => <AppHeaderMenu />,
+        headerLeft: () => (
+          // Logo e-GMC à gauche
+          <View style={{ marginLeft: 15 }}>
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "bold",
+                color: "rgb(34, 7, 237)",
+              }}
+            >
+              e-GMC
+            </Text>
+          </View>
+        ),
+        headerRight: () => <AppHeaderMenu />, // Menu à droite
 
         tabBarActiveTintColor: "#e81010ff",
         tabBarInactiveTintColor: "#0144b8ff",
@@ -76,6 +107,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="session/index"
         options={{
@@ -85,6 +117,7 @@ export default function TabsLayout() {
           ),
         }}
       />
+
       <Tabs.Screen
         name="quittance/index"
         options={{
@@ -98,25 +131,31 @@ export default function TabsLayout() {
       <Tabs.Screen
         name="(_menu)/profile/index"
         options={{
-          href: null, // 🔹 Cache tout le groupe (_menu)
+          href: null,
+          headerTitle: "Mon Profil",
         }}
       />
+
       <Tabs.Screen
         name="(_menu)/appHeaderMenu"
         options={{
-          href: null, // 🔹 Cache tout le groupe (_menu)
+          href: null,
         }}
       />
+
       <Tabs.Screen
         name="(_menu)/synchro/index"
         options={{
-          href: null, // 🔹 Cache tout le groupe (_menu)
+          href: null,
+          headerTitle: "Synchronisation",
         }}
       />
+
       <Tabs.Screen
         name="(_menu)/note/index"
         options={{
-          href: null, // 🔹 Cache tout le groupe (_menu)
+          href: null,
+          headerTitle: "Notes",
         }}
       />
     </Tabs>

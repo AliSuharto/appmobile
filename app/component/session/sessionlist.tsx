@@ -14,6 +14,7 @@ import {
   View,
 } from "react-native";
 import { CreateSessionModal } from "./createSessionModal";
+import { ValidateSessionButton } from "./validateSessionButton";
 
 interface SessionListProps {
   onSelectSession: (sessionId: number) => void;
@@ -160,8 +161,13 @@ export const SessionList: React.FC<SessionListProps> = ({
     loadSessions(); // Recharger les sessions après création
   };
 
+  const handleValidationSuccess = () => {
+    loadSessions(); // Recharger les sessions après mise en validation
+  };
+
   const renderSessionItem = ({ item }: { item: SessionWithStats }) => {
     const statusBadge = sessionService.getStatusBadge(item.statut);
+    const isOpenSession = item.statut.toUpperCase() === "OUVERTE";
 
     return (
       <TouchableOpacity
@@ -211,6 +217,15 @@ export const SessionList: React.FC<SessionListProps> = ({
             <Text style={styles.statLabel}>Total collecté</Text>
           </View>
         </View>
+
+        {/* Bouton de validation - affiché uniquement pour les sessions ouvertes */}
+        {isOpenSession && (
+          <ValidateSessionButton
+            sessionId={item.id}
+            sessionName={item.nom}
+            onValidationSuccess={handleValidationSuccess}
+          />
+        )}
       </TouchableOpacity>
     );
   };

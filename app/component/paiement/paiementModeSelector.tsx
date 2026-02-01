@@ -11,8 +11,9 @@ import {
   Text,
   TextInput,
   TouchableOpacity,
-  View
+  View,
 } from "react-native";
+import ReceiptActionsModal from "./receiptActionModal";
 import { Marchand } from "./searchMarchand";
 
 interface Props {
@@ -36,8 +37,13 @@ const PaymentModalSearch = ({
   const [numeroQuittance, setNumeroQuittance] = useState("");
 
   const [idAgent, setIdAgent] = useState<number | null>(null);
+  const [agentName, setAgentName] = useState<string>("");
   const [sessionId, setSessionId] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+
+  // État pour le modal d'actions de reçu
+  const [receiptModalVisible, setReceiptModalVisible] = useState(false);
+  const [completedPayment, setCompletedPayment] = useState<any>(null);
 
   // Utiliser le hook personnalisé
   const { createLocalPaiement } = useLocalPaiement();
@@ -68,7 +74,9 @@ const PaymentModalSearch = ({
       if (userDataString) {
         const userData = JSON.parse(userDataString);
         setIdAgent(userData.id);
+        setAgentName(userData.nom || userData.name || "Agent");
         console.log("✅ Agent ID chargé:", userData.id);
+        console.log("✅ Agent Name chargé:", userData.nom || userData.name);
       }
 
       const openSession = await sessionService.getOpenSessionWithStats();
@@ -153,7 +161,21 @@ const PaymentModalSearch = ({
         },
       });
 
-      // 4. Afficher le résultat approprié
+      // 4. Préparer les données du paiement pour le reçu
+      const paymentData = {
+        ...apiData,
+        agentName: agentName,
+        nomMarchands: marchand.nom,
+        motif: motif,
+        montant: parseFloat(montant),
+        createdAt: apiData.createdAt || new Date().toISOString(),
+        numeroQuittance: apiData.recuNumero || numeroQuittance,
+      };
+
+      // 5. Stocker le paiement complété
+      setCompletedPayment(paymentData);
+
+      // 6. Afficher le résultat avec option d'ouvrir le modal de reçu
       if (localSuccess) {
         Alert.alert(
           "Succès",
@@ -164,7 +186,27 @@ const PaymentModalSearch = ({
             `Quittance: ${numeroQuittance}`,
           [
             {
-              text: "OK",
+              text: "Générer le reçu",
+              onPress: () => {
+                // Réinitialiser le formulaire
+                setNumeroQuittance("");
+                setTypePaiement("droit_place");
+
+                // Fermer le modal de paiement
+                onClose();
+
+                // Callback de succès
+                if (onSuccess) {
+                  onSuccess();
+                }
+
+                // Ouvrir le modal d'actions de reçu
+                setReceiptModalVisible(true);
+              },
+            },
+            {
+              text: "Plus tard",
+              style: "cancel",
               onPress: () => {
                 // Réinitialiser le formulaire
                 setNumeroQuittance("");
@@ -215,103 +257,117 @@ const PaymentModalSearch = ({
   if (!marchand) return null;
 
   return (
-    <KeyboardAvoidingView>
-      <Modal visible={visible} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <View style={styles.modal}>
-            {/* ❌ Bouton X */}
-            <TouchableOpacity
-              style={styles.closeIcon}
-              onPress={onClose}
-              disabled={loading}
-            >
-              <Text style={styles.closeText}>✕</Text>
-            </TouchableOpacity>
-
-            <Text style={styles.title}>Effectuer un paiement</Text>
-
-            {/* Informations du marchand */}
-            <View style={styles.infoContainer}>
-              <InfoRow label="Nom" value={marchand.nom} />
-              <InfoRow label="Activité" value={marchand.activite} />
-              <InfoRow label="Place" value={marchand.place} />
-              <InfoRow label="CIN" value={marchand.cin} />
-              <InfoRow label="Fréquence" value={marchand.frequencePaiement} />
-            </View>
-
-            {/* Sélection du type de paiement */}
-            <Text style={styles.sectionTitle}>Type de paiement</Text>
-            <View style={styles.radioContainer}>
+    <>
+      <KeyboardAvoidingView>
+        <Modal visible={visible} animationType="slide" transparent>
+          <View style={styles.overlay}>
+            <View style={styles.modal}>
+              {/* ❌ Bouton X */}
               <TouchableOpacity
-                style={styles.radioButton}
-                onPress={() => setTypePaiement("droit_place")}
+                style={styles.closeIcon}
+                onPress={onClose}
                 disabled={loading}
               >
-                <Text style={styles.radioText}>
-                  {typePaiement === "droit_place" ? "🔘" : "⚪"} Droit de place
+                <Text style={styles.closeText}>✕</Text>
+              </TouchableOpacity>
+
+              <Text style={styles.title}>Effectuer un paiement</Text>
+
+              {/* Informations du marchand */}
+              <View style={styles.infoContainer}>
+                <InfoRow label="Nom" value={marchand.nom} />
+                <InfoRow label="Activité" value={marchand.activite} />
+                <InfoRow label="Place" value={marchand.place} />
+                <InfoRow label="CIN" value={marchand.cin} />
+                <InfoRow label="Fréquence" value={marchand.frequencePaiement} />
+              </View>
+
+              {/* Sélection du type de paiement */}
+              <Text style={styles.sectionTitle}>Type de paiement</Text>
+              <View style={styles.radioContainer}>
+                <TouchableOpacity
+                  style={styles.radioButton}
+                  onPress={() => setTypePaiement("droit_place")}
+                  disabled={loading}
+                >
+                  <Text style={styles.radioText}>
+                    {typePaiement === "droit_place" ? "🔘" : "⚪"} Droit de
+                    place
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.radioButton}
+                  onPress={() => setTypePaiement("droit_annuel")}
+                  disabled={loading}
+                >
+                  <Text style={styles.radioText}>
+                    {typePaiement === "droit_annuel" ? "🔘" : "⚪"} Droit annuel
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Montant */}
+              <Text style={styles.label}>Montant</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={montant}
+                editable={false}
+              />
+
+              {/* Motif */}
+              <Text style={styles.label}>Motif</Text>
+              <TextInput
+                style={[styles.input, styles.inputDisabled]}
+                value={motif}
+                editable={false}
+              />
+
+              {/* Numéro de quittance */}
+              <Text style={styles.label}>Numéro de quittance *</Text>
+              <TextInput
+                style={styles.input}
+                value={numeroQuittance}
+                onChangeText={setNumeroQuittance}
+                placeholder="Entrer le numéro de quittance"
+                editable={!loading}
+              />
+
+              {/* Bouton de validation */}
+              <TouchableOpacity
+                style={[styles.payButton, loading && styles.payButtonDisabled]}
+                onPress={handlePaiement}
+                disabled={loading}
+              >
+                <Text style={styles.payButtonText}>
+                  {loading ? "Traitement en cours..." : "Valider le paiement"}
                 </Text>
               </TouchableOpacity>
 
+              {/* Bouton Annuler */}
               <TouchableOpacity
-                style={styles.radioButton}
-                onPress={() => setTypePaiement("droit_annuel")}
+                style={styles.cancelButton}
+                onPress={onClose}
                 disabled={loading}
               >
-                <Text style={styles.radioText}>
-                  {typePaiement === "droit_annuel" ? "🔘" : "⚪"} Droit annuel
-                </Text>
+                <Text style={styles.cancelButtonText}>Annuler</Text>
               </TouchableOpacity>
             </View>
-
-            {/* Montant */}
-            <Text style={styles.label}>Montant</Text>
-            <TextInput
-              style={[styles.input, styles.inputDisabled]}
-              value={montant}
-              editable={false}
-            />
-
-            {/* Motif */}
-            <Text style={styles.label}>Motif</Text>
-            <TextInput
-              style={[styles.input, styles.inputDisabled]}
-              value={motif}
-              editable={false}
-            />
-
-            {/* Numéro de quittance */}
-            <Text style={styles.label}>Numéro de quittance *</Text>
-            <TextInput
-              style={styles.input}
-              value={numeroQuittance}
-              onChangeText={setNumeroQuittance}
-              placeholder="Entrer le numéro de quittance"
-              editable={!loading}
-            />
-
-            {/* Bouton de validation */}
-            <TouchableOpacity
-              style={[styles.payButton, loading && styles.payButtonDisabled]}
-              onPress={handlePaiement}
-              disabled={loading}
-            >
-              <Text style={styles.payButtonText}>
-                {loading ? "Traitement en cours..." : "Valider le paiement"}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Bouton Annuler */}
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={onClose}
-              disabled={loading}
-            >
-              <Text style={styles.cancelButtonText}>Annuler</Text>
-            </TouchableOpacity>
           </View>
-        </View>
-      </Modal>
-    </KeyboardAvoidingView>
+        </Modal>
+      </KeyboardAvoidingView>
+
+      {/* Modal d'actions de reçu */}
+      <ReceiptActionsModal
+        visible={receiptModalVisible}
+        onClose={() => setReceiptModalVisible(false)}
+        payment={completedPayment}
+        agentName={agentName}
+        companyName="Votre Entreprise"
+        companyAddress="Adresse de votre entreprise"
+        companyPhone="+261 XX XX XXX XX"
+      />
+    </>
   );
 };
 

@@ -1,3 +1,4 @@
+import { BASE_URL_API } from "@/app/utilitaire/api";
 import {
   CreateSessionDTO,
   PaiementWithMarchand,
@@ -183,6 +184,34 @@ export const sessionService = {
         return { color: "yellow", label: "En attente" };
       default:
         return { color: "blue", label: statut };
+    }
+  },
+
+  /**
+   * Met une session en validation via l'API
+   * @param sessionId - L'ID de la session à mettre en validation
+   */
+  validateSession: async (sessionId: number): Promise<void> => {
+    try {
+      const response = await fetch(
+        `${BASE_URL_API}/sessions/${sessionId}/close`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        throw new Error(`Erreur API: ${response.status}`);
+      }
+
+      const data = await response.json();
+      return data;
+    } catch (error) {
+      console.error("Erreur lors de la mise en validation:", error);
+      throw error;
     }
   },
 };

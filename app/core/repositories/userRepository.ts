@@ -1,4 +1,4 @@
-import { db } from '../database/sqlite';
+import { db } from "../database/sqlite";
 
 export interface User {
   id: number;
@@ -25,7 +25,7 @@ export const userRepository = {
   async getAll(): Promise<User[]> {
     const database = await db;
     const result = await database.getAllAsync<User>(
-      `SELECT * FROM users ORDER BY created_at DESC`
+      `SELECT * FROM users ORDER BY created_at DESC`,
     );
     return result;
   },
@@ -37,7 +37,7 @@ export const userRepository = {
     const database = await db;
     const result = await database.getAllAsync<User>(
       `SELECT * FROM users WHERE id = ?`,
-      [id]
+      [id],
     );
     return result.length > 0 ? result[0] : null;
   },
@@ -49,7 +49,7 @@ export const userRepository = {
     const database = await db;
     const result = await database.getAllAsync<User>(
       `SELECT * FROM users WHERE email = ?`,
-      [email]
+      [email],
     );
     return result.length > 0 ? result[0] : null;
   },
@@ -57,12 +57,14 @@ export const userRepository = {
   /**
    * Créer un nouvel utilisateur
    */
-  async create(user: Omit<User, 'id' | 'created_at' | 'updated_at'>): Promise<number> {
+  async create(
+    user: Omit<User, "id" | "created_at" | "updated_at">,
+  ): Promise<number> {
     const database = await db;
     const result = await database.runAsync(
       `INSERT INTO users (nom, prenom, email, role, telephone)
        VALUES (?, ?, ?, ?, ?)`,
-      [user.nom, user.prenom, user.email, user.role, user.telephone]
+      [user.nom, user.prenom, user.email, user.role, user.telephone],
     );
     return result.lastInsertRowId;
   },
@@ -70,13 +72,16 @@ export const userRepository = {
   /**
    * Mettre à jour un utilisateur
    */
-  async update(id: number, updates: Partial<Omit<User, 'id' | 'created_at'>>): Promise<void> {
+  async update(
+    id: number,
+    updates: Partial<Omit<User, "id" | "created_at">>,
+  ): Promise<void> {
     const database = await db;
     const fields: string[] = [];
     const values: any[] = [];
 
     Object.entries(updates).forEach(([key, value]) => {
-      if (key !== 'updated_at') {
+      if (key !== "updated_at") {
         fields.push(`${key} = ?`);
         values.push(value);
       }
@@ -84,12 +89,12 @@ export const userRepository = {
 
     if (fields.length === 0) return;
 
-    fields.push('updated_at = CURRENT_TIMESTAMP');
+    fields.push("updated_at = CURRENT_TIMESTAMP");
     values.push(id);
 
     await database.runAsync(
-      `UPDATE users SET ${fields.join(', ')} WHERE id = ?`,
-      values
+      `UPDATE users SET ${fields.join(", ")} WHERE id = ?`,
+      values,
     );
   },
 
@@ -110,27 +115,28 @@ export const userRepository = {
     // Nombre de paiements enregistrés par cet agent
     const paiementsResult = await database.getAllAsync<{ count: number }>(
       `SELECT COUNT(*) as count FROM paiements WHERE agent_id = ?`,
-      [userId]
+      [userId],
     );
 
     // Montant total collecté
     const montantResult = await database.getAllAsync<{ total: number | null }>(
       `SELECT SUM(montant) as total FROM paiements WHERE agent_id = ?`,
-      [userId]
+      [userId],
     );
 
     // Nombre de sessions actives où l'utilisateur est régisseur principal
     const sessionsResult = await database.getAllAsync<{ count: number }>(
       `SELECT COUNT(*) as count FROM sessions 
-       WHERE regisseur_principal_id = ? AND statut = 'active'`,
-      [userId]
+       WHERE regisseur_principal_id = ? AND statut = 'VALIDEE'`,
+      [userId],
     );
 
     // Date du dernier paiement enregistré
-    const dernierPaiementResult = await database.getAllAsync<{ date: string | null }>(
-      `SELECT MAX(date_paiement) as date FROM paiements WHERE agent_id = ?`,
-      [userId]
-    );
+    const dernierPaiementResult = await database.getAllAsync<{
+      date: string | null;
+    }>(`SELECT MAX(date_paiement) as date FROM paiements WHERE agent_id = ?`, [
+      userId,
+    ]);
 
     return {
       totalPaiementsEnregistres: paiementsResult[0]?.count || 0,
@@ -151,21 +157,18 @@ export const userRepository = {
       type_paiement: string;
       date_paiement: string;
       marchand_nom: string;
-      marchand_prenom: string;
     }>(
       `SELECT 
         p.id,
         p.montant,
         p.type_paiement,
         p.date_paiement,
-        m.nom as marchand_nom,
-        m.prenom as marchand_prenom
+        m.marchandnom as marchand_nom,        
        FROM paiements p
-       INNER JOIN marchands m ON p.marchand_id = m.id
        WHERE p.agent_id = ?
        ORDER BY p.date_paiement DESC
        LIMIT ?`,
-      [userId, limit]
+      [userId, limit],
     );
     return result;
   },
@@ -176,7 +179,7 @@ export const userRepository = {
   async countByRole(): Promise<{ role: string; count: number }[]> {
     const database = await db;
     const result = await database.getAllAsync<{ role: string; count: number }>(
-      `SELECT role, COUNT(*) as count FROM users GROUP BY role`
+      `SELECT role, COUNT(*) as count FROM users GROUP BY role`,
     );
     return result;
   },

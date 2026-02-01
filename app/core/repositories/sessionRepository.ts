@@ -242,8 +242,6 @@ export const sessionRepository = {
 
   /* ---------- CRUD SESSION ---------- */
 
-  /* ---------- CRUD SESSION ---------- */
-
   create: async (data: CreateSessionDTO): Promise<Session> => {
     const database = await db;
 
@@ -304,10 +302,9 @@ export const sessionRepository = {
 
   closeSession: async (id: number): Promise<void> => {
     const database = await db;
-
     await database.runAsync(
       `UPDATE sessions 
-       SET statut = 'FERMEE', date_fermeture = CURRENT_TIMESTAMP 
+       SET statut = 'EN_VALIDATION', date_fermeture = CURRENT_TIMESTAMP 
        WHERE id = ?`,
       [id],
     );
