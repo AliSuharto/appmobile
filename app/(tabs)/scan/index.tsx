@@ -26,6 +26,7 @@ export default function QRScannerScreen({ navigation }: any) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [cameraActive, setCameraActive] = useState(false); // Nouveau état pour contrôler la caméra
   const [marchand, setMarchand] = useState<Marchand | null>(null);
   const [stats, setStats] = useState<MarchandStats | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -86,6 +87,7 @@ export default function QRScannerScreen({ navigation }: any) {
       setStats(statsData);
       setPlaces(placesData);
       setPaiements(paiementsData);
+      setCameraActive(false); // Désactiver la caméra après le scan
     } catch (error) {
       console.error("Erreur:", error);
       Alert.alert("Erreur", "Une erreur est survenue lors du scan");
@@ -121,6 +123,18 @@ export default function QRScannerScreen({ navigation }: any) {
     setPlaces([]);
     setPaiements([]);
     setShowPaymentModal(false);
+    setCameraActive(false); // Désactiver la caméra
+  };
+
+  const activateCamera = async () => {
+    if (!permission?.granted) {
+      const result = await requestPermission();
+      if (result.granted) {
+        setCameraActive(true);
+      }
+    } else {
+      setCameraActive(true);
+    }
   };
 
   const formatMontant = (montant: number | null | undefined) => {
@@ -152,20 +166,8 @@ export default function QRScannerScreen({ navigation }: any) {
   if (!permission) {
     return (
       <View style={styles.container}>
-        <ActivityIndicator size="large" color="#2563eb" />
+        <ActivityIndicator size="large" color="#5DADE2" />
         <Text style={styles.loadingText}>Chargement...</Text>
-      </View>
-    );
-  }
-
-  if (!permission.granted) {
-    return (
-      <View style={styles.container}>
-        <MaterialIcons name="camera-alt" size={64} color="#ef4444" />
-        <Text style={styles.errorText}>Accès à la caméra nécessaire</Text>
-        <TouchableOpacity style={styles.btnPrimary} onPress={requestPermission}>
-          <Text style={styles.btnPrimaryText}>Autoriser la caméra</Text>
-        </TouchableOpacity>
       </View>
     );
   }
@@ -175,39 +177,80 @@ export default function QRScannerScreen({ navigation }: any) {
       <StatusBar barStyle="light-content" />
 
       {!marchand ? (
-        // Mode Scanner
-        <View style={styles.scannerContainer}>
-          <CameraView
-            style={styles.camera}
-            facing="back"
-            onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
-            barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
-          >
-            <View style={styles.overlay}>
-              <View style={styles.header}>
-                <Text style={styles.headerTitle}>
-                  Scanner la Carte Marchand
+        // Mode Scanner ou écran d'accueil
+        !cameraActive ? (
+          // Écran d'accueil avec bouton
+          <View style={styles.welcomeContainer}>
+            <View style={styles.welcomeContent}>
+              <MaterialIcons
+                name="qr-code-scanner"
+                size={120}
+                color="#5DADE2"
+              />
+              <Text style={styles.welcomeTitle}>Scanner QR Code</Text>
+              <Text style={styles.welcomeSubtitle}>
+                Scannez la carte marchand pour accéder aux informations et
+                effectuer un paiement
+              </Text>
+
+              <TouchableOpacity
+                style={styles.btnActivateCamera}
+                onPress={activateCamera}
+              >
+                <MaterialIcons name="camera-alt" size={24} color="#fff" />
+                <Text style={styles.btnActivateCameraText}>
+                  Activer la caméra
+                </Text>
+              </TouchableOpacity>
+
+              {!permission.granted && (
+                <Text style={styles.permissionNote}>
+                  L'accès à la caméra sera demandé
+                </Text>
+              )}
+            </View>
+          </View>
+        ) : (
+          // Mode Scanner actif
+          <View style={styles.scannerContainer}>
+            <CameraView
+              style={styles.camera}
+              facing="back"
+              onBarcodeScanned={scanned ? undefined : handleBarCodeScanned}
+              barcodeScannerSettings={{ barcodeTypes: ["qr"] }}
+            >
+              <View style={styles.overlay}>
+                <View style={styles.header}>
+                  <TouchableOpacity
+                    onPress={() => setCameraActive(false)}
+                    style={styles.closeButton}
+                  >
+                    <MaterialIcons name="close" size={28} color="#fff" />
+                  </TouchableOpacity>
+                  <Text style={styles.headerTitle}>
+                    Scanner la Carte Marchand
+                  </Text>
+                </View>
+
+                <View style={styles.scannerFrame}>
+                  <View style={[styles.corner, styles.topLeft]} />
+                  <View style={[styles.corner, styles.topRight]} />
+                  <View style={[styles.corner, styles.bottomLeft]} />
+                  <View style={[styles.corner, styles.bottomRight]} />
+                  {loading && (
+                    <View style={styles.loadingOverlay}>
+                      <ActivityIndicator size="large" color="#fff" />
+                      <Text style={styles.loadingText}>Vérification...</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.instruction}>
+                  Placez le QR code dans le cadre
                 </Text>
               </View>
-
-              <View style={styles.scannerFrame}>
-                <View style={[styles.corner, styles.topLeft]} />
-                <View style={[styles.corner, styles.topRight]} />
-                <View style={[styles.corner, styles.bottomLeft]} />
-                <View style={[styles.corner, styles.bottomRight]} />
-                {loading && (
-                  <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color="#fff" />
-                    <Text style={styles.loadingText}>Vérification...</Text>
-                  </View>
-                )}
-              </View>
-              <Text style={styles.instruction}>
-                Placez le QR code dans le cadre
-              </Text>
-            </View>
-          </CameraView>
-        </View>
+            </CameraView>
+          </View>
+        )
       ) : (
         // Mode Résultat - Design comme l'image
         <View style={styles.resultWrapper}>
@@ -359,8 +402,65 @@ export default function QRScannerScreen({ navigation }: any) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#0f172a",
+    backgroundColor: "#F8FBFF",
   },
+
+  // Écran d'accueil
+  welcomeContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    backgroundColor: "#F8FBFF",
+    padding: 24,
+  },
+  welcomeContent: {
+    alignItems: "center",
+    maxWidth: 400,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: "bold",
+    color: "#2C3E50",
+    marginTop: 24,
+    marginBottom: 12,
+    textAlign: "center",
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: "#5A6C7D",
+    textAlign: "center",
+    lineHeight: 24,
+    marginBottom: 40,
+  },
+  btnActivateCamera: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#5DADE2",
+    paddingHorizontal: 32,
+    paddingVertical: 16,
+    borderRadius: 12,
+    gap: 12,
+    shadowColor: "#5DADE2",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  btnActivateCameraText: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+  },
+  permissionNote: {
+    fontSize: 13,
+    color: "#5A6C7D",
+    marginTop: 16,
+    textAlign: "center",
+    opacity: 0.7,
+  },
+
+  // Scanner
   scannerContainer: {
     flex: 1,
     width: "100%",
@@ -378,6 +478,17 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginTop: 60,
   },
+  closeButton: {
+    position: "absolute",
+    top: -40,
+    right: 0,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: "rgba(0,0,0,0.3)",
+    justifyContent: "center",
+    alignItems: "center",
+  },
   headerTitle: {
     fontSize: 24,
     fontWeight: "bold",
@@ -394,7 +505,7 @@ const styles = StyleSheet.create({
     position: "absolute",
     width: 40,
     height: 40,
-    borderColor: "#3b82f6",
+    borderColor: "#5DADE2",
     borderWidth: 4,
   },
   topLeft: {
@@ -434,7 +545,7 @@ const styles = StyleSheet.create({
     marginBottom: 40,
   },
   loadingText: {
-    color: "#fff",
+    color: "#2C3E50",
     marginTop: 12,
     fontSize: 16,
   },
@@ -447,7 +558,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
   },
   btnPrimary: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#5DADE2",
     paddingHorizontal: 24,
     paddingVertical: 14,
     borderRadius: 12,
@@ -462,22 +573,22 @@ const styles = StyleSheet.create({
   // Nouveau design - résultat
   resultWrapper: {
     flex: 1,
-    backgroundColor: "#0f1729",
+    backgroundColor: "#F8FBFF",
   },
   heroHeader: {
     height: 170,
     position: "relative",
     overflow: "hidden",
-    backgroundColor: "#1e293b",
+    backgroundColor: "#5DADE2",
   },
   backButton: {
     position: "absolute",
-    top: 2,
+    top: 50,
     left: 16,
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(0,0,0,0.3)",
+    backgroundColor: "rgba(0,0,0,0.2)",
     justifyContent: "center",
     alignItems: "center",
     zIndex: 10,
@@ -493,7 +604,7 @@ const styles = StyleSheet.create({
   heroLabel: {
     fontSize: 11,
     fontWeight: "600",
-    color: "rgba(255,255,255,0.7)",
+    color: "rgba(255,255,255,0.8)",
     letterSpacing: 1,
     marginBottom: 4,
   },
@@ -514,21 +625,26 @@ const styles = StyleSheet.create({
   },
   contentScroll: {
     flex: 1,
-    backgroundColor: "#0f1729",
+    backgroundColor: "#F8FBFF",
   },
   statusCard: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    backgroundColor: "#1a2332",
+    backgroundColor: "#FFFFFF",
     marginHorizontal: 16,
     marginTop: 16,
     padding: 16,
     borderRadius: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   statusLabel: {
     fontSize: 14,
-    color: "#94a3b8",
+    color: "#5A6C7D",
     fontWeight: "500",
   },
   statusBadgeContainer: {
@@ -559,25 +675,30 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: 18,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#2C3E50",
   },
   sectionLink: {
     fontSize: 14,
-    color: "#3b82f6",
+    color: "#5DADE2",
     fontWeight: "600",
   },
   paiementItem: {
     flexDirection: "row",
-    backgroundColor: "#1a2332",
+    backgroundColor: "#FFFFFF",
     padding: 16,
     borderRadius: 12,
     marginBottom: 12,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 3,
+    elevation: 2,
   },
   paiementIcon: {
     width: 48,
     height: 48,
     borderRadius: 24,
-    backgroundColor: "#1e3a8a",
+    backgroundColor: "#E3F2FD",
     justifyContent: "center",
     alignItems: "center",
     marginRight: 12,
@@ -594,39 +715,41 @@ const styles = StyleSheet.create({
   paiementMontant: {
     fontSize: 16,
     fontWeight: "bold",
-    color: "#fff",
+    color: "#2C3E50",
   },
   paiementDate: {
     fontSize: 11,
-    color: "#64748b",
+    color: "#5A6C7D",
     fontWeight: "600",
   },
   paiementMotif: {
     fontSize: 13,
-    color: "#94a3b8",
+    color: "#5A6C7D",
     marginBottom: 4,
   },
   paiementPlace: {
     fontSize: 12,
-    color: "#64748b",
+    color: "#5A6C7D",
+    opacity: 0.8,
   },
   emptyState: {
     alignItems: "center",
     paddingVertical: 60,
-    backgroundColor: "#1a2332",
+    backgroundColor: "#FFFFFF",
     borderRadius: 12,
   },
   emptyText: {
     fontSize: 14,
-    color: "#64748b",
+    color: "#5A6C7D",
     marginTop: 12,
   },
   endHistoryText: {
     textAlign: "center",
     fontSize: 12,
-    color: "#475569",
+    color: "#5A6C7D",
     marginTop: 16,
     marginBottom: 24,
+    opacity: 0.6,
   },
   bottomButton: {
     position: "absolute",
@@ -634,18 +757,23 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     padding: 16,
-    backgroundColor: "#0f1729",
+    backgroundColor: "#F8FBFF",
     borderTopWidth: 1,
-    borderTopColor: "#1e293b",
+    borderTopColor: "#E1E8ED",
   },
   btnPaiement: {
-    backgroundColor: "#2563eb",
+    backgroundColor: "#5DADE2",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     padding: 16,
     borderRadius: 12,
     gap: 8,
+    shadowColor: "#5DADE2",
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
   },
   btnPaiementText: {
     color: "#fff",
