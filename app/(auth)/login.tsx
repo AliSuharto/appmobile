@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   KeyboardAvoidingView,
   Platform,
   StyleSheet,
@@ -11,15 +12,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import ForgotPasswordModal from "../component/user/ForgotpasswordModal";
 import { useAuth } from "../hooks/AuthContext";
-import { useTheme } from "../hooks/useTheme";
 
 export default function LoginScreen() {
   const { login } = useAuth();
-  const theme = useTheme();
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
 
   const handleLogin = async () => {
     // Validation des champs
@@ -66,75 +68,76 @@ export default function LoginScreen() {
     }
   };
 
-  return (
-    <KeyboardAvoidingView
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-    >
-      <StatusBar style="light" />
-      <View style={styles.content}>
-        <Text style={[styles.title, { color: theme.colors.text }]}>
-          Connexion
-        </Text>
+  const handleForgotPasswordSuccess = (newPassword: string) => {
+    // Fermer le modal
+    setShowForgotPasswordModal(false);
 
-        <Text style={[styles.subtitle, { color: theme.colors.text + "80" }]}>
+    // Pré-remplir le champ mot de passe avec le nouveau mot de passe
+    setPassword(newPassword);
+
+    // Message d'information
+    Alert.alert(
+      "✅ Mot de passe réinitialisé",
+      "Votre nouveau mot de passe a été pré-rempli. Vous pouvez maintenant vous connecter.",
+      [{ text: "OK" }],
+    );
+  };
+
+  return (
+    <View style={styles.container}>
+      <StatusBar style="dark" />
+
+      <KeyboardAvoidingView
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        style={styles.content}
+      >
+        {/* Logo */}
+        <View style={styles.logoContainer}>
+          <Image
+            source={require("../../assets/images/icon.png")}
+            style={styles.logo}
+            resizeMode="contain"
+          />
+        </View>
+
+        <Text style={styles.title}>Connexion</Text>
+
+        <Text style={styles.subtitle}>
           Première connexion via internet, puis mode hors-ligne disponible
         </Text>
 
         <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.colors.card,
-              color: theme.colors.text,
-              borderColor: theme.colors.border,
-            },
-          ]}
+          style={styles.input}
           placeholder="Email"
-          placeholderTextColor={theme.colors.text + "80"}
+          placeholderTextColor="#999"
           value={email}
           onChangeText={setEmail}
           keyboardType="email-address"
           autoCapitalize="none"
           autoCorrect={false}
           editable={!loading}
-          returnKeyType="next"
         />
 
         <TextInput
-          style={[
-            styles.input,
-            {
-              backgroundColor: theme.colors.card,
-              color: theme.colors.text,
-              borderColor: theme.colors.border,
-            },
-          ]}
+          style={styles.input}
           placeholder="Mot de passe"
-          placeholderTextColor={theme.colors.text + "80"}
+          placeholderTextColor="#999"
           value={password}
           onChangeText={setPassword}
           secureTextEntry
+          autoCapitalize="none"
           editable={!loading}
-          returnKeyType="done"
-          onSubmitEditing={handleLogin}
         />
 
         <TouchableOpacity
-          style={[
-            styles.button,
-            { backgroundColor: theme.colors.primary },
-            loading && styles.buttonDisabled,
-          ]}
+          style={[styles.button, loading && styles.buttonDisabled]}
           onPress={handleLogin}
           disabled={loading}
         >
           {loading ? (
             <View style={styles.loadingContainer}>
               <ActivityIndicator color="#fff" />
-              <Text style={[styles.buttonText, { marginLeft: 12 }]}>
-                Connexion...
-              </Text>
+              <Text style={styles.buttonText}>Connexion...</Text>
             </View>
           ) : (
             <Text style={styles.buttonText}>Se connecter</Text>
@@ -143,53 +146,62 @@ export default function LoginScreen() {
 
         <TouchableOpacity
           style={styles.forgotPassword}
-          disabled={loading}
-          onPress={() => {
-            Alert.alert(
-              "Mot de passe oublié",
-              "Contactez votre administrateur pour réinitialiser votre mot de passe.",
-            );
-          }}
+          onPress={() => setShowForgotPasswordModal(true)}
         >
-          <Text
-            style={[styles.forgotPasswordText, { color: theme.colors.primary }]}
-          >
-            Mot de passe oublié ?
-          </Text>
+          <Text style={styles.forgotPasswordText}>Mot de passe oublié ?</Text>
         </TouchableOpacity>
 
         {/* Section d'aide */}
         <View style={styles.helpContainer}>
-          <Text style={[styles.helpText, { color: theme.colors.text + "60" }]}>
+          <Text style={styles.helpText}>
             💡 Après la première connexion, vous pourrez vous connecter même
             sans internet
           </Text>
         </View>
-      </View>
-    </KeyboardAvoidingView>
+      </KeyboardAvoidingView>
+
+      {/* Modal Mot de passe oublié */}
+      <ForgotPasswordModal
+        visible={showForgotPasswordModal}
+        onClose={() => setShowForgotPasswordModal(false)}
+        onSuccess={handleForgotPasswordSuccess}
+      />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#F8FBFF", // Fond blanc-bleuté très clair
   },
   content: {
     flex: 1,
     justifyContent: "center",
     paddingHorizontal: 24,
   },
+  logoContainer: {
+    alignItems: "center",
+    marginBottom: 32,
+  },
+  logo: {
+    width: 120,
+    height: 120,
+  },
   title: {
     fontSize: 32,
     fontWeight: "bold",
     marginBottom: 8,
     textAlign: "center",
+    color: "#2C3E50", // Texte gris foncé
   },
   subtitle: {
     fontSize: 14,
     marginBottom: 32,
     textAlign: "center",
     lineHeight: 20,
+    color: "#0e3b65", // Texte gris moyen
+    opacity: 0.8,
   },
   input: {
     height: 56,
@@ -198,6 +210,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     fontSize: 16,
+    backgroundColor: "#FFFFFF", // Fond blanc
+    borderColor: "#E1E8ED", // Bordure gris clair
+    color: "#2C3E50", // Texte gris foncé
   },
   button: {
     height: 56,
@@ -205,6 +220,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 8,
+    backgroundColor: "#bab026", // Bleu ciel
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -217,6 +233,7 @@ const styles = StyleSheet.create({
   loadingContainer: {
     flexDirection: "row",
     alignItems: "center",
+    gap: 8,
   },
   forgotPassword: {
     marginTop: 16,
@@ -224,6 +241,8 @@ const styles = StyleSheet.create({
   },
   forgotPasswordText: {
     fontSize: 14,
+    fontWeight: "600",
+    color: "#0a4b78", // Bleu ciel
   },
   helpContainer: {
     marginTop: 32,
@@ -234,5 +253,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
+    color: "#0f151b", // Texte gris moyen
+    opacity: 0.7,
   },
 });

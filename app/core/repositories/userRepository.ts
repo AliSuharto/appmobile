@@ -1,4 +1,5 @@
 import { db } from "../database/sqlite";
+import { authRepository } from "./authRepository";
 
 export interface User {
   id: number;
@@ -16,6 +17,20 @@ export interface UserStats {
   montantTotalCollecte: number;
   nombreSessionsActives: number;
   dernierPaiementDate: string | null;
+}
+
+export interface PasswordResetData {
+  nom: string;
+  prenom: string;
+  email: string;
+  telephone: string;
+  role: string;
+}
+
+export interface PasswordResetResult {
+  success: boolean;
+  newPassword?: string;
+  message?: string;
 }
 
 export const userRepository = {
@@ -182,5 +197,113 @@ export const userRepository = {
       `SELECT role, COUNT(*) as count FROM users GROUP BY role`,
     );
     return result;
+  },
+
+  /**
+   * Génère un mot de passe aléatoire sécurisé
+   */
+  generateRandomPassword(length: number = 12): string {
+    const uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    const lowercase = "abcdefghijklmnopqrstuvwxyz";
+    const numbers = "0123456789";
+    const symbols = "!@#$%^&*";
+
+    const allChars = uppercase + lowercase + numbers + symbols;
+    let password = "";
+
+    // S'assurer qu'on a au moins un de chaque type
+    password += uppercase[Math.floor(Math.random() * uppercase.length)];
+    password += lowercase[Math.floor(Math.random() * lowercase.length)];
+    password += numbers[Math.floor(Math.random() * numbers.length)];
+    password += symbols[Math.floor(Math.random() * symbols.length)];
+
+    // Remplir le reste
+    for (let i = password.length; i < length; i++) {
+      password += allChars[Math.floor(Math.random() * allChars.length)];
+    }
+
+    // Mélanger les caractères
+    return password
+      .split("")
+      .sort(() => Math.random() - 0.5)
+      .join("");
+  },
+
+  /**
+   * Vérifie les informations de l'utilisateur et réinitialise le mot de passe
+   */
+  async resetPasswordWithVerification(
+    data: PasswordResetData,
+  ): Promise<PasswordResetResult> {
+    try {
+      const database = await db;
+
+      // Normaliser les données pour la comparaison
+      const normalizedData = {
+        nom: data.nom.trim().toLowerCase(),
+        prenom: data.prenom.trim().toLowerCase(),
+        email: data.email.trim().toLowerCase(),
+        telephone: data.telephone.trim(),
+        role: data.role.trim().toLowerCase(),
+      };
+
+      console.log("🔍 Recherche d'utilisateur avec:", normalizedData);
+
+      // Chercher l'utilisateur avec TOUS les critères
+      const user = await database.getFirstAsync<User>(
+        `SELECT * FROM users 
+         WHERE LOWER(TRIM(nom)) = ? 
+         AND LOWER(TRIM(prenom)) = ? 
+         AND LOWER(TRIM(email)) = ? 
+         AND TRIM(telephone) = ? 
+         AND LOWER(TRIM(role)) = ?
+         LIMIT 1`,
+        [
+          normalizedData.nom,
+          normalizedData.prenom,
+          normalizedData.email,
+          normalizedData.telephone,
+          normalizedData.role,
+        ],
+      );
+
+      if (!user) {
+        console.log("❌ Aucun utilisateur trouvé avec ces informations");
+        return {
+          success: false,
+          message:
+            "Aucun compte ne correspond à ces informations. Veuillez vérifier vos données.",
+        };
+      }
+
+      console.log("✅ Utilisateur trouvé:", user.email);
+
+      // Générer un nouveau mot de passe
+      const newPassword = this.generateRandomPassword(12);
+      console.log("🔑 Nouveau mot de passe généré");
+
+      // Hasher le nouveau mot de passe
+      const hashedPassword = await authRepository.hashPassword(newPassword);
+
+      // Mettre à jour le mot de passe dans la base de données
+      await database.runAsync(
+        "UPDATE users SET password = ?, updated_at = ? WHERE id = ?",
+        [hashedPassword, new Date().toISOString(), user.id],
+      );
+
+      console.log("💾 Mot de passe mis à jour dans la base de données");
+
+      return {
+        success: true,
+        newPassword: newPassword,
+        message: "Mot de passe réinitialisé avec succès",
+      };
+    } catch (error) {
+      console.error(
+        "❌ Erreur lors de la réinitialisation du mot de passe:",
+        error,
+      );
+      throw new Error("Erreur lors de la réinitialisation du mot de passe");
+    }
   },
 };

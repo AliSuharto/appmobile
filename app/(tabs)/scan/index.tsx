@@ -322,7 +322,7 @@ export default function QRScannerScreen({ navigation }: any) {
             {/* Fin de l'historique */}
             {paiements.length > 0 && (
               <Text style={styles.endHistoryText}>
-                Fin de l'historique récent
+                Fin de l&apos;historique récent
               </Text>
             )}
 
@@ -347,7 +347,7 @@ export default function QRScannerScreen({ navigation }: any) {
       {marchand && (
         <PaymentModalQR
           visible={showPaymentModal}
-          cin={marchand.cin}
+          cin={marchand.cin || ""}
           onClose={() => setShowPaymentModal(false)}
           onSuccess={handlePaymentSuccess}
         />

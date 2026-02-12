@@ -175,12 +175,12 @@ export const sessionService = {
   getStatusBadge: (statut: string): { color: string; label: string } => {
     switch (statut.toLowerCase()) {
       case "active":
-      case "ouvert":
+      case "OUVERTE":
         return { color: "green", label: "Ouverte" };
       case "fermée":
-      case "fermee":
+      case "FERMEE":
         return { color: "gray", label: "Fermée" };
-      case "en attente":
+      case "EN_ATTENTE":
         return { color: "yellow", label: "En attente" };
       default:
         return { color: "blue", label: statut };
