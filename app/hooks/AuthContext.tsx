@@ -38,33 +38,76 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   /**
-   * Vérifie l'authentification au démarrage
+   * Vérifie l'authentification au démarrage.
+   *
+   * Stratégie "offline-first" (comme Facebook) :
+   * 1. Si un token + userData sont stockés localement → on connecte
+   *    l'utilisateur IMMÉDIATEMENT sans attendre le réseau.
+   * 2. On vérifie le token en arrière-plan : si invalide/expiré,
+   *    on déconnecte silencieusement.
+   * 3. Si pas de token → écran de login.
    */
   const checkAuth = async () => {
     try {
-      const token = await SecureStore.getItemAsync("userToken");
+      const [token, userDataStr] = await Promise.all([
+        SecureStore.getItemAsync("userToken"),
+        SecureStore.getItemAsync("userData"),
+      ]);
 
-      if (token) {
-        // Vérifier la validité du token
-        const result = await authService.verifyToken(token);
+      if (token && userDataStr) {
+        // ✅ ÉTAPE 1 : Restauration immédiate depuis le stockage local
+        // L'utilisateur entre directement dans l'app, pas besoin d'internet
+        const cachedUser = JSON.parse(userDataStr) as User;
+        setIsAuthenticated(true);
+        setUser(cachedUser);
+        console.log("✅ Session restaurée localement:", cachedUser.email);
 
-        if (result.success && result.user) {
-          setIsAuthenticated(true);
-          setUser(result.user as User);
-          console.log(
-            "✅ Utilisateur authentifié au démarrage:",
-            result.user.email,
-          );
-        } else {
-          // Token invalide, nettoyer
-          await clearAuth();
-        }
+        // ✅ ÉTAPE 2 : Vérification en arrière-plan (silencieuse)
+        // On ne bloque PAS l'UI pour ça
+        verifyTokenInBackground(token);
+      } else {
+        // Aucun token → login obligatoire
+        console.log("ℹ️ Aucune session trouvée, redirection login");
       }
     } catch (error) {
       console.error("❌ Erreur vérification auth:", error);
       await clearAuth();
     } finally {
+      // On débloque l'UI dans tous les cas
       setIsLoading(false);
+    }
+  };
+
+  /**
+   * Vérification du token côté serveur en arrière-plan.
+   * Ne bloque jamais l'affichage. Déconnecte seulement si le serveur
+   * confirme que le token est invalide (pas en cas d'erreur réseau).
+   */
+  const verifyTokenInBackground = async (token: string) => {
+    try {
+      const result = await authService.verifyToken(token);
+
+      if (result.success && result.user) {
+        // Token valide → mettre à jour les données utilisateur silencieusement
+        setUser(result.user as User);
+        await SecureStore.setItemAsync("userData", JSON.stringify(result.user));
+        console.log("🔄 Session vérifiée et données à jour");
+      } else if (
+        result.success === false &&
+        result.message?.includes("expiré")
+      ) {
+        // Token explicitement rejeté par le serveur → déconnexion
+        console.log("⚠️ Token expiré, déconnexion");
+        await clearAuth();
+        router.replace("/(auth)/login");
+      }
+      // En cas d'erreur réseau (pas de réponse), on ne fait rien :
+      // l'utilisateur reste connecté avec ses données en cache
+    } catch (error) {
+      // Pas de réseau ou serveur inaccessible → on garde la session locale
+      console.log(
+        "📡 Vérification arrière-plan échouée (réseau?), session conservée",
+      );
     }
   };
 
@@ -78,27 +121,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       console.log("🔐 Tentative de connexion pour:", email);
       const result = await authService.login({ email, password });
-      console.log("🔐 Résultat de authService.login:", result);
-      console.log("📊 Résultat de la connexion:", {
-        success: result.success,
-        hasToken: !!result.token,
-        hasUser: !!result.user,
-        message: result.message,
-      });
 
       if (result.success && result.token && result.user) {
-        // Stocker le token et les données utilisateur
         await SecureStore.setItemAsync("userToken", result.token);
         await SecureStore.setItemAsync("userData", JSON.stringify(result.user));
 
-        console.log("💾 Token et données utilisateur stockés");
-
-        // Mettre à jour l'état - IMPORTANT: cela déclenche la navigation
         setIsAuthenticated(true);
         setUser(result.user as User);
 
-        console.log("✅ État d'authentification mis à jour");
-
+        console.log("✅ Connexion réussie, session persistée");
         return { success: true, message: result.message };
       } else {
         return {
@@ -116,38 +147,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   /**
-   * Déconnexion de l'utilisateur
+   * Déconnexion explicite de l'utilisateur
    */
   const logout = async () => {
-    console.log("🚪 Déconnexion de l'utilisateur");
+    console.log("🚪 Déconnexion volontaire");
     await clearAuth();
     router.replace("/(auth)/login");
   };
 
   /**
-   * Nettoie les données d'authentification
+   * Nettoie toutes les données d'authentification
    */
   const clearAuth = async () => {
     try {
       await SecureStore.deleteItemAsync("userToken");
       await SecureStore.deleteItemAsync("userData");
     } catch (error) {
-      console.error("❌ Erreur lors du nettoyage de l'auth:", error);
+      console.error("❌ Erreur nettoyage auth:", error);
     }
     setIsAuthenticated(false);
     setUser(null);
   };
 
   /**
-   * Rafraîchit les données utilisateur
+   * Rafraîchit les données utilisateur depuis le serveur
    */
   const refreshUser = async () => {
     try {
       const token = await SecureStore.getItemAsync("userToken");
-
       if (token) {
         const result = await authService.verifyToken(token);
-
         if (result.success && result.user) {
           setUser(result.user as User);
           await SecureStore.setItemAsync(
@@ -158,50 +187,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
     } catch (error) {
-      console.error(
-        "❌ Erreur lors du rafraîchissement de l'utilisateur:",
-        error,
-      );
+      console.error("❌ Erreur rafraîchissement utilisateur:", error);
     }
   };
 
   /**
-   * Navigation automatique basée sur l'authentification
+   * Navigation automatique basée sur l'état d'authentification
    */
   useEffect(() => {
-    if (isLoading) {
-      console.log("⏳ Chargement en cours, navigation en attente...");
-      return;
-    }
+    if (isLoading) return;
 
     const inAuthGroup = segments[0] === "(auth)";
 
-    console.log("🧭 Navigation check:", {
-      isAuthenticated,
-      inAuthGroup,
-      segments: segments.join("/"),
-      user: user?.email,
-    });
-
     if (!isAuthenticated && !inAuthGroup) {
-      console.log("➡️ Redirection vers login (non authentifié)");
       router.replace("/(auth)/login");
     } else if (isAuthenticated && inAuthGroup) {
-      console.log("➡️ Redirection vers accueil (authentifié)");
       router.replace("/(tabs)/marchand");
     }
   }, [isAuthenticated, segments, isLoading]);
 
   return (
     <AuthContext.Provider
-      value={{
-        isAuthenticated,
-        user,
-        login,
-        logout,
-        isLoading,
-        refreshUser,
-      }}
+      value={{ isAuthenticated, user, login, logout, isLoading, refreshUser }}
     >
       {children}
     </AuthContext.Provider>

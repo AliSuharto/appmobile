@@ -12,8 +12,65 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Svg, { Line, Path } from "react-native-svg";
 import ForgotPasswordModal from "../component/user/ForgotpasswordModal";
 import { useAuth } from "../hooks/AuthContext";
+
+// Icône œil ouvert (mot de passe visible)
+const EyeOpenIcon = ({ color = "#999" }: { color?: string }) => (
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M12 9a3 3 0 1 1 0 6 3 3 0 0 1 0-6z"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>
+);
+
+// Icône œil barré (mot de passe masqué)
+const EyeOffIcon = ({ color = "#999" }: { color?: string }) => (
+  <Svg width={22} height={22} viewBox="0 0 24 24" fill="none">
+    <Path
+      d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Path
+      d="M14.12 14.12a3 3 0 1 1-4.24-4.24"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+    <Line
+      x1="1"
+      y1="1"
+      x2="23"
+      y2="23"
+      stroke={color}
+      strokeWidth={1.8}
+      strokeLinecap="round"
+    />
+  </Svg>
+);
 
 export default function LoginScreen() {
   const { login } = useAuth();
@@ -22,15 +79,15 @@ export default function LoginScreen() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotPasswordModal, setShowForgotPasswordModal] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleLogin = async () => {
-    // Validation des champs
     if (!email || !password) {
       Alert.alert("Erreur", "Veuillez remplir tous les champs");
       return;
     }
 
-    // Validation basique de l'email
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
       Alert.alert("Erreur", "Veuillez entrer une adresse email valide");
@@ -41,19 +98,14 @@ export default function LoginScreen() {
 
     try {
       console.log("🔐 Tentative de connexion depuis LoginScreen...");
-
-      // Utiliser la fonction login du contexte
       const result = await login(email.trim(), password);
 
       if (!result.success) {
         Alert.alert("Erreur", result.message || "Identifiants invalides");
       } else {
-        // Connexion réussie - la navigation est gérée automatiquement par AuthContext
         console.log(
           "✅ Connexion réussie, attente de la navigation automatique...",
         );
-
-        // Optionnel: Afficher un message de succès temporaire
         Alert.alert("Succès", result.message || "Connexion réussie");
       }
     } catch (error: any) {
@@ -69,13 +121,8 @@ export default function LoginScreen() {
   };
 
   const handleForgotPasswordSuccess = (newPassword: string) => {
-    // Fermer le modal
     setShowForgotPasswordModal(false);
-
-    // Pré-remplir le champ mot de passe avec le nouveau mot de passe
     setPassword(newPassword);
-
-    // Message d'information
     Alert.alert(
       "✅ Mot de passe réinitialisé",
       "Votre nouveau mot de passe a été pré-rempli. Vous pouvez maintenant vous connecter.",
@@ -103,7 +150,8 @@ export default function LoginScreen() {
         <Text style={styles.title}>Connexion</Text>
 
         <Text style={styles.subtitle}>
-          Première connexion via internet, puis mode hors-ligne disponible
+          {" "}
+          Veuillez entrer ci-dessous vos identifiants
         </Text>
 
         <TextInput
@@ -118,16 +166,38 @@ export default function LoginScreen() {
           editable={!loading}
         />
 
-        <TextInput
-          style={styles.input}
-          placeholder="Mot de passe"
-          placeholderTextColor="#999"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
-          autoCapitalize="none"
-          editable={!loading}
-        />
+        {/* Champ mot de passe avec icône SVG */}
+        <View
+          style={[
+            styles.passwordContainer,
+            passwordFocused && styles.passwordContainerFocused,
+          ]}
+        >
+          <TextInput
+            style={styles.passwordInput}
+            placeholder="Mot de passe"
+            placeholderTextColor="#999"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry={!showPassword}
+            autoCapitalize="none"
+            editable={!loading}
+            onFocus={() => setPasswordFocused(true)}
+            onBlur={() => setPasswordFocused(false)}
+          />
+          <TouchableOpacity
+            style={styles.eyeButton}
+            onPress={() => setShowPassword((prev) => !prev)}
+            activeOpacity={0.5}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            {showPassword ? (
+              <EyeOpenIcon color={passwordFocused ? "#0a4b78" : "#aab"} />
+            ) : (
+              <EyeOffIcon color={passwordFocused ? "#0a4b78" : "#aab"} />
+            )}
+          </TouchableOpacity>
+        </View>
 
         <TouchableOpacity
           style={[styles.button, loading && styles.buttonDisabled]}
@@ -154,8 +224,7 @@ export default function LoginScreen() {
         {/* Section d'aide */}
         <View style={styles.helpContainer}>
           <Text style={styles.helpText}>
-            💡 Après la première connexion, vous pourrez vous connecter même
-            sans internet
+            💡 Première connexion via internet, puis mode hors-ligne disponible
           </Text>
         </View>
       </KeyboardAvoidingView>
@@ -173,7 +242,7 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FBFF", // Fond blanc-bleuté très clair
+    backgroundColor: "#F8FBFF",
   },
   content: {
     flex: 1,
@@ -193,14 +262,14 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     marginBottom: 8,
     textAlign: "center",
-    color: "#2C3E50", // Texte gris foncé
+    color: "#2C3E50",
   },
   subtitle: {
     fontSize: 14,
-    marginBottom: 32,
+    marginBottom: 24,
     textAlign: "center",
     lineHeight: 20,
-    color: "#0e3b65", // Texte gris moyen
+    color: "#0e3b65",
     opacity: 0.8,
   },
   input: {
@@ -210,9 +279,36 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 16,
     fontSize: 16,
-    backgroundColor: "#FFFFFF", // Fond blanc
-    borderColor: "#E1E8ED", // Bordure gris clair
-    color: "#2C3E50", // Texte gris foncé
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E1E8ED",
+    color: "#2C3E50",
+  },
+  passwordContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 56,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginBottom: 16,
+    backgroundColor: "#FFFFFF",
+    borderColor: "#E1E8ED",
+  },
+  passwordContainerFocused: {
+    borderColor: "#0a4b78",
+    borderWidth: 1.5,
+  },
+  passwordInput: {
+    flex: 1,
+    height: "100%",
+    paddingHorizontal: 16,
+    fontSize: 16,
+    color: "#2C3E50",
+  },
+  eyeButton: {
+    paddingHorizontal: 14,
+    height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
   },
   button: {
     height: 56,
@@ -220,7 +316,7 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
     marginTop: 8,
-    backgroundColor: "#bab026", // Bleu ciel
+    backgroundColor: "#bab026",
   },
   buttonDisabled: {
     opacity: 0.6,
@@ -242,7 +338,7 @@ const styles = StyleSheet.create({
   forgotPasswordText: {
     fontSize: 14,
     fontWeight: "600",
-    color: "#0a4b78", // Bleu ciel
+    color: "#0a4b78",
   },
   helpContainer: {
     marginTop: 32,
@@ -253,7 +349,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: "center",
     lineHeight: 18,
-    color: "#0f151b", // Texte gris moyen
+    color: "#0f151b",
     opacity: 0.7,
   },
 });
