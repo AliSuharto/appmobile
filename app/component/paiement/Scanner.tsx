@@ -208,7 +208,7 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
           `Paiement effectué avec succès\n\n` +
             `Marchand: ${marchand.nom}\n` +
             `Type: ${typePaiement === "droit_place" ? "Droit de place" : "Droit annuel"}\n` +
-            `Montant: ${montant} FCFA\n` +
+            `Montant: ${montant} Ar\n` +
             `Quittance: ${numeroQuittance}`,
           [
             {
@@ -255,7 +255,7 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
           "Paiement effectué sur le serveur mais erreur d'enregistrement local.\n\n" +
             `Les données seront synchronisées lors de la prochaine connexion.\n\n` +
             `Quittance: ${numeroQuittance}\n` +
-            `Montant: ${montant} FCFA`,
+            `Montant: ${montant} Ar`,
           [
             {
               text: "OK",

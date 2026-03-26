@@ -138,12 +138,12 @@ export default function QRScannerScreen({ navigation }: any) {
   };
 
   const formatMontant = (montant: number | null | undefined) => {
-    if (!montant) return "0 FCFA";
+    if (!montant) return "0 Ar";
     return (
       new Intl.NumberFormat("fr-FR", {
         style: "decimal",
         minimumFractionDigits: 0,
-      }).format(montant) + " FCFA"
+      }).format(montant) + " Ar"
     );
   };
 
