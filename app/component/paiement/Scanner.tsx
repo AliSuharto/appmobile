@@ -401,7 +401,7 @@ const PaymentModalQR = ({ visible, cin, onClose, onSuccess }: Props) => {
                 <View style={styles.section}>
                   <Text style={styles.label}>Montant</Text>
                   <View style={styles.inputDisabled}>
-                    <Text style={styles.inputDisabledText}>{montant} FCFA</Text>
+                    <Text style={styles.inputDisabledText}>{montant} Ar</Text>
                   </View>
                 </View>
 

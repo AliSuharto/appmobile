@@ -20,7 +20,6 @@ interface ReceiptOptions {
 }
 
 export const useReceiptPDF = () => {
-  // Créer le HTML du reçu
   const createReceiptHTML = async (
     payment: PaymentData,
     options: ReceiptOptions = {},
@@ -48,8 +47,7 @@ export const useReceiptPDF = () => {
           minute: "2-digit",
         });
 
-    // Données pour affichage dans le PDF
-    const qrData = `QUITTANCE: ${payment.numeroQuittance}\nMONTANT: ${payment.montant} Ar\nDATE: ${date}`;
+    const qrData = `N°: ${payment.numeroQuittance} | Montant: ${payment.montant} Ar | Date: ${date}`;
 
     return `
       <!DOCTYPE html>
@@ -63,236 +61,239 @@ export const useReceiptPDF = () => {
               padding: 0;
               box-sizing: border-box;
             }
-            
+
+            html, body {
+              width: 210mm;
+              height: 297mm;
+              overflow: hidden;
+            }
+
             body {
               font-family: 'Helvetica', 'Arial', sans-serif;
-              padding: 40px;
               background: #fff;
+              padding: 16px 24px;
             }
-            
+
             .receipt-container {
-              max-width: 800px;
-              margin: 0 auto;
               border: 2px solid #333;
-              padding: 30px;
+              padding: 16px 22px;
+              height: 100%;
             }
-            
-            .header {
-              text-align: center;
-              border-bottom: 3px solid #007bff;
-              padding-bottom: 20px;
-              margin-bottom: 30px;
-            }
-            
-            .company-name {
-              font-size: 28px;
-              font-weight: bold;
-              color: #007bff;
-              margin-bottom: 10px;
-            }
-            
-            .company-info {
-              font-size: 14px;
-              color: #666;
-              line-height: 1.6;
-            }
-            
-            .receipt-title {
-              text-align: center;
-              font-size: 24px;
-              font-weight: bold;
-              color: #333;
-              margin: 30px 0;
-              text-transform: uppercase;
-              letter-spacing: 2px;
-            }
-            
-            .receipt-number {
-              text-align: center;
-              font-size: 16px;
-              color: #666;
-              margin-bottom: 30px;
-            }
-            
-            .receipt-details {
-              margin: 30px 0;
-            }
-            
-            .detail-row {
-              display: flex;
-              padding: 15px 0;
-              border-bottom: 1px solid #eee;
-            }
-            
-            .detail-label {
-              font-weight: bold;
-              color: #333;
-              width: 200px;
-              flex-shrink: 0;
-            }
-            
-            .detail-value {
-              color: #555;
-              flex: 1;
-            }
-            
-            .amount-section {
-              background: #f8f9fa;
-              padding: 20px;
-              margin: 30px 0;
-              border-radius: 8px;
-              border-left: 4px solid #007bff;
-            }
-            
-            .amount-label {
-              font-size: 18px;
-              font-weight: bold;
-              color: #333;
-              margin-bottom: 10px;
-            }
-            
-            .amount-value {
-              font-size: 32px;
-              font-weight: bold;
-              color: #007bff;
-            }
-            
-            .qr-section {
-              text-align: center;
-              margin: 40px 0;
-              padding: 20px;
-              background: #f8f9fa;
-              border-radius: 8px;
-            }
-            
-            .qr-placeholder {
-              display: inline-block;
-              width: 200px;
-              background: white;
-              border: 2px solid #007bff;
-              border-radius: 8px;
-              padding: 20px;
-              margin: 0 auto;
-            }
-            
-            .qr-text {
-              font-size: 12px;
-              color: #333;
-              white-space: pre-line;
-              text-align: center;
-              line-height: 1.6;
-            }
-            
-            .qr-label {
-              margin-top: 15px;
-              font-size: 14px;
-              color: #666;
-            }
-            
-            .footer {
-              margin-top: 50px;
-              padding-top: 20px;
-              border-top: 2px solid #eee;
-              text-align: center;
-            }
-            
-            .signature-section {
-              display: flex;
-              justify-content: space-between;
-              margin-top: 60px;
-            }
-            
-            .signature-box {
-              width: 45%;
-              text-align: center;
-            }
-            
-            .signature-line {
-              border-top: 2px solid #333;
-              margin-top: 60px;
-              padding-top: 10px;
-              font-size: 14px;
-              color: #666;
-            }
-            
-            .footer-note {
-              margin-top: 30px;
-              font-size: 12px;
-              color: #999;
-              font-style: italic;
-            }
-            
+
             .watermark {
               position: fixed;
               top: 50%;
               left: 50%;
               transform: translate(-50%, -50%) rotate(-45deg);
-              font-size: 120px;
+              font-size: 100px;
               color: rgba(0, 123, 255, 0.05);
               font-weight: bold;
               z-index: -1;
               pointer-events: none;
             }
+
+            /* HEADER */
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #007bff;
+              padding-bottom: 10px;
+              margin-bottom: 10px;
+            }
+
+            .company-name {
+              font-size: 20px;
+              font-weight: bold;
+              color: #007bff;
+              margin-bottom: 3px;
+            }
+
+            .company-info {
+              font-size: 11px;
+              color: #666;
+              line-height: 1.4;
+            }
+
+            /* TITRE */
+            .receipt-title {
+              text-align: center;
+              font-size: 16px;
+              font-weight: bold;
+              color: #333;
+              margin: 8px 0 2px 0;
+              text-transform: uppercase;
+              letter-spacing: 2px;
+            }
+
+            .receipt-number {
+              text-align: center;
+              font-size: 12px;
+              color: #666;
+              margin-bottom: 10px;
+            }
+
+            /* DÉTAILS */
+            .receipt-details {
+              margin: 8px 0;
+            }
+
+            .detail-row {
+              display: flex;
+              padding: 7px 0;
+              border-bottom: 1px solid #eee;
+            }
+
+            .detail-label {
+              font-weight: bold;
+              color: #333;
+              width: 160px;
+              flex-shrink: 0;
+              font-size: 12px;
+            }
+
+            .detail-value {
+              color: #555;
+              flex: 1;
+              font-size: 12px;
+            }
+
+            /* MONTANT */
+            .amount-section {
+              background: #f8f9fa;
+              padding: 10px 14px;
+              margin: 10px 0;
+              border-radius: 6px;
+              border-left: 4px solid #007bff;
+              display: flex;
+              align-items: center;
+              justify-content: space-between;
+            }
+
+            .amount-label {
+              font-size: 14px;
+              font-weight: bold;
+              color: #333;
+            }
+
+            .amount-value {
+              font-size: 24px;
+              font-weight: bold;
+              color: #007bff;
+            }
+
+            /* QR / VÉRIFICATION */
+            .qr-section {
+              text-align: center;
+              margin: 10px 0;
+              padding: 10px;
+              background: #f8f9fa;
+              border-radius: 6px;
+            }
+
+            .qr-placeholder {
+              display: inline-block;
+              background: white;
+              border: 1.5px solid #007bff;
+              border-radius: 6px;
+              padding: 8px 16px;
+            }
+
+            .qr-text {
+              font-size: 10px;
+              color: #333;
+              text-align: center;
+              line-height: 1.5;
+            }
+
+            .qr-label {
+              margin-top: 6px;
+              font-size: 11px;
+              color: #666;
+            }
+
+            /* FOOTER */
+            .footer {
+              margin-top: 10px;
+              padding-top: 10px;
+              border-top: 1.5px solid #eee;
+            }
+
+            .signature-section {
+              display: flex;
+              justify-content: space-between;
+              margin-top: 10px;
+            }
+
+            .signature-box {
+              width: 45%;
+              text-align: center;
+            }
+
+            .signature-line {
+              border-top: 1.5px solid #333;
+              margin-top: 40px;
+              padding-top: 6px;
+              font-size: 11px;
+              color: #666;
+            }
+
+            .footer-note {
+              margin-top: 10px;
+              font-size: 10px;
+              color: #999;
+              font-style: italic;
+              text-align: center;
+            }
           </style>
         </head>
         <body>
           <div class="watermark">PAYÉ</div>
-          
+
           <div class="receipt-container">
             <div class="header">
               <div class="company-name">${companyName}</div>
               <div class="company-info">
-                ${companyAddress}<br>
-                Tél: ${companyPhone}
+                ${companyAddress} &nbsp;|&nbsp; Tél: ${companyPhone}
               </div>
             </div>
-            
+
             <div class="receipt-title">Reçu de Paiement</div>
-            
-            <div class="receipt-number">
-              N° ${payment.numeroQuittance}
-            </div>
-            
+            <div class="receipt-number">N° ${payment.numeroQuittance}</div>
+
             <div class="receipt-details">
               <div class="detail-row">
                 <div class="detail-label">Date:</div>
                 <div class="detail-value">${date}</div>
               </div>
-              
               <div class="detail-row">
                 <div class="detail-label">Nom du marchand:</div>
                 <div class="detail-value">${payment.nomMarchands}</div>
               </div>
-              
               ${
                 payment.motif
-                  ? `
-              <div class="detail-row">
+                  ? `<div class="detail-row">
                 <div class="detail-label">Motif:</div>
                 <div class="detail-value">${payment.motif}</div>
-              </div>
-              `
+              </div>`
                   : ""
               }
-              
               <div class="detail-row">
                 <div class="detail-label">Agent:</div>
                 <div class="detail-value">${agentName}</div>
               </div>
             </div>
-            
+
             <div class="amount-section">
               <div class="amount-label">Montant payé:</div>
               <div class="amount-value">${payment.montant.toLocaleString("fr-FR")} Ar</div>
             </div>
-            
+
             <div class="qr-section">
               <div class="qr-placeholder">
                 <div class="qr-text">${qrData}</div>
               </div>
               <div class="qr-label">Informations de vérification</div>
             </div>
-            
+
             <div class="footer">
               <div class="signature-section">
                 <div class="signature-box">
@@ -302,10 +303,8 @@ export const useReceiptPDF = () => {
                   <div class="signature-line">Signature du marchand</div>
                 </div>
               </div>
-              
               <div class="footer-note">
-                Ce document est un reçu de paiement officiel.<br>
-                Merci pour votre confiance.
+                Ce document est un reçu de paiement officiel. Merci pour votre confiance.
               </div>
             </div>
           </div>
@@ -314,19 +313,13 @@ export const useReceiptPDF = () => {
     `;
   };
 
-  // Générer le PDF
   const generatePDF = async (
     payment: PaymentData,
     options: ReceiptOptions = {},
   ): Promise<string | null> => {
     try {
       const html = await createReceiptHTML(payment, options);
-
-      const { uri } = await Print.printToFileAsync({
-        html,
-        base64: false,
-      });
-
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
       console.log("✅ PDF généré:", uri);
       return uri;
     } catch (error) {
@@ -336,20 +329,15 @@ export const useReceiptPDF = () => {
     }
   };
 
-  // Partager le PDF (inclut l'option de sauvegarder via le menu de partage)
   const sharePDF = async (
     payment: PaymentData,
     options: ReceiptOptions = {},
   ): Promise<void> => {
     try {
       const pdfUri = await generatePDF(payment, options);
-
-      if (!pdfUri) {
-        return;
-      }
+      if (!pdfUri) return;
 
       const isAvailable = await Sharing.isAvailableAsync();
-
       if (!isAvailable) {
         Alert.alert(
           "Non disponible",
@@ -358,7 +346,6 @@ export const useReceiptPDF = () => {
         return;
       }
 
-      // Le menu de partage natif permet de sauvegarder dans les fichiers
       await Sharing.shareAsync(pdfUri, {
         mimeType: "application/pdf",
         dialogTitle: `Reçu N° ${payment.numeroQuittance}`,
@@ -372,18 +359,13 @@ export const useReceiptPDF = () => {
     }
   };
 
-  // Imprimer le PDF
   const printPDF = async (
     payment: PaymentData,
     options: ReceiptOptions = {},
   ): Promise<void> => {
     try {
       const html = await createReceiptHTML(payment, options);
-
-      await Print.printAsync({
-        html,
-      });
-
+      await Print.printAsync({ html });
       console.log("✅ Impression lancée");
     } catch (error) {
       console.error("❌ Erreur impression:", error);
@@ -391,24 +373,17 @@ export const useReceiptPDF = () => {
     }
   };
 
-  // Fonction de sauvegarde simplifiée - utilise le partage
-  // L'utilisateur peut choisir "Enregistrer dans les fichiers" dans le menu de partage
   const savePDF = async (
     payment: PaymentData,
     options: ReceiptOptions = {},
   ): Promise<string | null> => {
     try {
-      // Générer le PDF
       const pdfUri = await generatePDF(payment, options);
+      if (!pdfUri) return null;
 
-      if (!pdfUri) {
-        return null;
-      }
-
-      // Informer l'utilisateur
       Alert.alert(
         "PDF généré",
-        'Le PDF a été généré. Utilisez le bouton "Partager" pour le sauvegarder ou le partager.',
+        'Le PDF a été généré. Utilisez "Partager" pour le sauvegarder.',
         [
           {
             text: "Partager maintenant",
@@ -416,10 +391,7 @@ export const useReceiptPDF = () => {
               await sharePDF(payment, options);
             },
           },
-          {
-            text: "OK",
-            style: "cancel",
-          },
+          { text: "OK", style: "cancel" },
         ],
       );
 
@@ -432,10 +404,5 @@ export const useReceiptPDF = () => {
     }
   };
 
-  return {
-    generatePDF,
-    sharePDF,
-    printPDF,
-    savePDF,
-  };
+  return { generatePDF, sharePDF, printPDF, savePDF };
 };
