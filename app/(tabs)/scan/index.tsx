@@ -26,7 +26,7 @@ export default function QRScannerScreen({ navigation }: any) {
   const [permission, requestPermission] = useCameraPermissions();
   const [scanned, setScanned] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [cameraActive, setCameraActive] = useState(false); // Nouveau état pour contrôler la caméra
+  const [cameraActive, setCameraActive] = useState(false);
   const [marchand, setMarchand] = useState<Marchand | null>(null);
   const [stats, setStats] = useState<MarchandStats | null>(null);
   const [places, setPlaces] = useState<Place[]>([]);
@@ -40,11 +40,13 @@ export default function QRScannerScreen({ navigation }: any) {
     if (scanned) return;
     setScanned(true);
     setLoading(true);
-    try {
-      console.log("QR Data:", data);
 
-      // Vérification de l'authenticité
-      const verification = await verifyQRCode(data);
+    try {
+      console.log("QR Data brut:", data);
+
+      // ✅ Vérification de l'authenticité avec le nouveau format
+      const verification = verifyQRCode(data); // plus besoin de await, c'est synchrone
+
       if (!verification.isValid) {
         Alert.alert(
           "⚠️ ALERTE SÉCURITÉ",
@@ -64,32 +66,50 @@ export default function QRScannerScreen({ navigation }: any) {
             },
           ],
         );
-        return;
-      }
-
-      // Récupération des données
-      const [marchandData, statsData, placesData, paiementsData] =
-        await Promise.all([
-          marchandsService.getMarchandById(verification.data.id),
-          marchandsService.getMarchandStats(verification.data.id),
-          marchandsService.getPlacesByMarchand(verification.data.id),
-          marchandsService.getPaiementsByMarchand(verification.data.id),
-        ]);
-
-      if (!marchandData) {
-        Alert.alert("Erreur", "Marchand introuvable dans la base de données");
-        setScanned(false);
         setLoading(false);
         return;
       }
+
+      // ✅ verification.data contient maintenant { nom, cin, telephone }
+      const { cin } = verification.data!;
+
+      console.log("✅ QR valide - CIN:", cin);
+
+      // ✅ Recherche du marchand par CIN (plus par ID)
+      const marchandData = await marchandsService.getMarchandByCin(cin);
+
+      if (!marchandData) {
+        Alert.alert(
+          "Introuvable",
+          `Aucun marchand trouvé avec le CIN : ${cin}`,
+          [
+            {
+              text: "Réessayer",
+              onPress: () => {
+                setScanned(false);
+                setLoading(false);
+              },
+            },
+          ],
+        );
+        setLoading(false);
+        return;
+      }
+
+      // ✅ Chargement parallèle des données liées
+      const [statsData, placesData, paiementsData] = await Promise.all([
+        marchandsService.getMarchandStats(marchandData.id),
+        marchandsService.getPlacesByMarchand(marchandData.id),
+        marchandsService.getPaiementsByMarchand(marchandData.id),
+      ]);
 
       setMarchand(marchandData);
       setStats(statsData);
       setPlaces(placesData);
       setPaiements(paiementsData);
-      setCameraActive(false); // Désactiver la caméra après le scan
+      setCameraActive(false);
     } catch (error) {
-      console.error("Erreur:", error);
+      console.error("Erreur scan:", error);
       Alert.alert("Erreur", "Une erreur est survenue lors du scan");
       setScanned(false);
     } finally {
@@ -103,7 +123,6 @@ export default function QRScannerScreen({ navigation }: any) {
   };
 
   const handlePaymentSuccess = async () => {
-    // Recharger les paiements après un paiement réussi
     if (marchand) {
       try {
         const updatedPaiements = await marchandsService.getPaiementsByMarchand(
@@ -111,7 +130,7 @@ export default function QRScannerScreen({ navigation }: any) {
         );
         setPaiements(updatedPaiements);
       } catch (error) {
-        console.error("Erreur lors du rechargement des paiements:", error);
+        console.error("Erreur rechargement paiements:", error);
       }
     }
   };
@@ -123,7 +142,7 @@ export default function QRScannerScreen({ navigation }: any) {
     setPlaces([]);
     setPaiements([]);
     setShowPaymentModal(false);
-    setCameraActive(false); // Désactiver la caméra
+    setCameraActive(false);
   };
 
   const activateCamera = async () => {
@@ -147,15 +166,6 @@ export default function QRScannerScreen({ navigation }: any) {
     );
   };
 
-  const formatDate = (date: string | null | undefined) => {
-    if (!date) return "N/A";
-    return new Date(date).toLocaleDateString("fr-FR", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-    });
-  };
-
   const getPaymentStatusColor = (statut?: string | null) => {
     const s = statut?.toUpperCase();
     if (s === "A_JOUR") return "#10b981";
@@ -177,9 +187,7 @@ export default function QRScannerScreen({ navigation }: any) {
       <StatusBar barStyle="light-content" />
 
       {!marchand ? (
-        // Mode Scanner ou écran d'accueil
         !cameraActive ? (
-          // Écran d'accueil avec bouton
           <View style={styles.welcomeContainer}>
             <View style={styles.welcomeContent}>
               <MaterialIcons
@@ -192,7 +200,6 @@ export default function QRScannerScreen({ navigation }: any) {
                 Scannez la carte marchand pour accéder aux informations et
                 effectuer un paiement
               </Text>
-
               <TouchableOpacity
                 style={styles.btnActivateCamera}
                 onPress={activateCamera}
@@ -202,7 +209,6 @@ export default function QRScannerScreen({ navigation }: any) {
                   Activer la caméra
                 </Text>
               </TouchableOpacity>
-
               {!permission.granted && (
                 <Text style={styles.permissionNote}>
                   L'accès à la caméra sera demandé
@@ -211,7 +217,6 @@ export default function QRScannerScreen({ navigation }: any) {
             </View>
           </View>
         ) : (
-          // Mode Scanner actif
           <View style={styles.scannerContainer}>
             <CameraView
               style={styles.camera}
@@ -231,7 +236,6 @@ export default function QRScannerScreen({ navigation }: any) {
                     Scanner la Carte Marchand
                   </Text>
                 </View>
-
                 <View style={styles.scannerFrame}>
                   <View style={[styles.corner, styles.topLeft]} />
                   <View style={[styles.corner, styles.topRight]} />
@@ -252,14 +256,11 @@ export default function QRScannerScreen({ navigation }: any) {
           </View>
         )
       ) : (
-        // Mode Résultat - Design comme l'image
         <View style={styles.resultWrapper}>
-          {/* Header avec image de fond */}
           <View style={styles.heroHeader}>
             <TouchableOpacity onPress={resetScan} style={styles.backButton}>
               <MaterialIcons name="arrow-back" size={24} color="#fff" />
             </TouchableOpacity>
-
             <View style={styles.heroContent}>
               <Text style={styles.heroLabel}>MARCHAND</Text>
               <Text style={styles.heroName}>{marchand.nom}</Text>
@@ -282,7 +283,6 @@ export default function QRScannerScreen({ navigation }: any) {
             style={styles.contentScroll}
             showsVerticalScrollIndicator={false}
           >
-            {/* Statut du compte */}
             <View style={styles.statusCard}>
               <Text style={styles.statusLabel}>Statut du compte</Text>
               <View style={styles.statusBadgeContainer}>
@@ -309,7 +309,6 @@ export default function QRScannerScreen({ navigation }: any) {
               </View>
             </View>
 
-            {/* Derniers paiements */}
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Derniers paiements</Text>
@@ -324,7 +323,7 @@ export default function QRScannerScreen({ navigation }: any) {
                   <Text style={styles.emptyText}>Aucun paiement</Text>
                 </View>
               ) : (
-                paiements.slice(0, 5).map((paiement, index) => (
+                paiements.slice(0, 5).map((paiement) => (
                   <View key={paiement.id} style={styles.paiementItem}>
                     <View style={styles.paiementIcon}>
                       <MaterialIcons
@@ -362,18 +361,14 @@ export default function QRScannerScreen({ navigation }: any) {
               )}
             </View>
 
-            {/* Fin de l'historique */}
             {paiements.length > 0 && (
               <Text style={styles.endHistoryText}>
                 Fin de l&apos;historique récent
               </Text>
             )}
-
-            {/* Espacement pour le bouton fixe */}
             <View style={{ height: 100 }} />
           </ScrollView>
 
-          {/* Bouton Nouveau paiement fixe en bas */}
           <View style={styles.bottomButton}>
             <TouchableOpacity
               style={styles.btnPaiement}
@@ -386,7 +381,6 @@ export default function QRScannerScreen({ navigation }: any) {
         </View>
       )}
 
-      {/* Modal de paiement */}
       {marchand && (
         <PaymentModalQR
           visible={showPaymentModal}
@@ -400,12 +394,7 @@ export default function QRScannerScreen({ navigation }: any) {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: "#F8FBFF",
-  },
-
-  // Écran d'accueil
+  container: { flex: 1, backgroundColor: "#F8FBFF" },
   welcomeContainer: {
     flex: 1,
     justifyContent: "center",
@@ -413,10 +402,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#F8FBFF",
     padding: 24,
   },
-  welcomeContent: {
-    alignItems: "center",
-    maxWidth: 400,
-  },
+  welcomeContent: { alignItems: "center", maxWidth: 400 },
   welcomeTitle: {
     fontSize: 28,
     fontWeight: "bold",
@@ -447,11 +433,7 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  btnActivateCameraText: {
-    color: "#fff",
-    fontSize: 18,
-    fontWeight: "bold",
-  },
+  btnActivateCameraText: { color: "#fff", fontSize: 18, fontWeight: "bold" },
   permissionNote: {
     fontSize: 13,
     color: "#5A6C7D",
@@ -459,25 +441,15 @@ const styles = StyleSheet.create({
     textAlign: "center",
     opacity: 0.7,
   },
-
-  // Scanner
-  scannerContainer: {
-    flex: 1,
-    width: "100%",
-  },
-  camera: {
-    flex: 1,
-  },
+  scannerContainer: { flex: 1, width: "100%" },
+  camera: { flex: 1 },
   overlay: {
     flex: 1,
     backgroundColor: "rgba(0,0,0,0.5)",
     justifyContent: "space-between",
     padding: 20,
   },
-  header: {
-    alignItems: "center",
-    marginTop: 60,
-  },
+  header: { alignItems: "center", marginTop: 60 },
   closeButton: {
     position: "absolute",
     top: -40,
@@ -508,30 +480,10 @@ const styles = StyleSheet.create({
     borderColor: "#5DADE2",
     borderWidth: 4,
   },
-  topLeft: {
-    top: 0,
-    left: 0,
-    borderBottomWidth: 0,
-    borderRightWidth: 0,
-  },
-  topRight: {
-    top: 0,
-    right: 0,
-    borderBottomWidth: 0,
-    borderLeftWidth: 0,
-  },
-  bottomLeft: {
-    bottom: 0,
-    left: 0,
-    borderTopWidth: 0,
-    borderRightWidth: 0,
-  },
-  bottomRight: {
-    bottom: 0,
-    right: 0,
-    borderTopWidth: 0,
-    borderLeftWidth: 0,
-  },
+  topLeft: { top: 0, left: 0, borderBottomWidth: 0, borderRightWidth: 0 },
+  topRight: { top: 0, right: 0, borderBottomWidth: 0, borderLeftWidth: 0 },
+  bottomLeft: { bottom: 0, left: 0, borderTopWidth: 0, borderRightWidth: 0 },
+  bottomRight: { bottom: 0, right: 0, borderTopWidth: 0, borderLeftWidth: 0 },
   loadingOverlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.7)",
@@ -544,11 +496,7 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 40,
   },
-  loadingText: {
-    color: "#2C3E50",
-    marginTop: 12,
-    fontSize: 16,
-  },
+  loadingText: { color: "#2C3E50", marginTop: 12, fontSize: 16 },
   errorText: {
     fontSize: 18,
     fontWeight: "bold",
@@ -569,12 +517,7 @@ const styles = StyleSheet.create({
     fontWeight: "600",
     textAlign: "center",
   },
-
-  // Nouveau design - résultat
-  resultWrapper: {
-    flex: 1,
-    backgroundColor: "#F8FBFF",
-  },
+  resultWrapper: { flex: 1, backgroundColor: "#F8FBFF" },
   heroHeader: {
     height: 170,
     position: "relative",
@@ -614,19 +557,9 @@ const styles = StyleSheet.create({
     color: "#fff",
     marginBottom: 8,
   },
-  heroLocation: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 4,
-  },
-  heroLocationText: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.9)",
-  },
-  contentScroll: {
-    flex: 1,
-    backgroundColor: "#F8FBFF",
-  },
+  heroLocation: { flexDirection: "row", alignItems: "center", gap: 4 },
+  heroLocationText: { fontSize: 14, color: "rgba(255,255,255,0.9)" },
+  contentScroll: { flex: 1, backgroundColor: "#F8FBFF" },
   statusCard: {
     flexDirection: "row",
     justifyContent: "space-between",
@@ -642,46 +575,19 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  statusLabel: {
-    fontSize: 14,
-    color: "#5A6C7D",
-    fontWeight: "500",
-  },
-  statusBadgeContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  statusText: {
-    fontSize: 14,
-    fontWeight: "600",
-    textTransform: "capitalize",
-  },
-  section: {
-    marginTop: 24,
-    paddingHorizontal: 16,
-  },
+  statusLabel: { fontSize: 14, color: "#5A6C7D", fontWeight: "500" },
+  statusBadgeContainer: { flexDirection: "row", alignItems: "center", gap: 8 },
+  statusDot: { width: 8, height: 8, borderRadius: 4 },
+  statusText: { fontSize: 14, fontWeight: "600", textTransform: "capitalize" },
+  section: { marginTop: 24, paddingHorizontal: 16 },
   sectionHeader: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 16,
   },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: "bold",
-    color: "#2C3E50",
-  },
-  sectionLink: {
-    fontSize: 14,
-    color: "#5DADE2",
-    fontWeight: "600",
-  },
+  sectionTitle: { fontSize: 18, fontWeight: "bold", color: "#2C3E50" },
+  sectionLink: { fontSize: 14, color: "#5DADE2", fontWeight: "600" },
   paiementItem: {
     flexDirection: "row",
     backgroundColor: "#FFFFFF",
@@ -703,46 +609,24 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginRight: 12,
   },
-  paiementContent: {
-    flex: 1,
-  },
+  paiementContent: { flex: 1 },
   paiementRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 6,
   },
-  paiementMontant: {
-    fontSize: 16,
-    fontWeight: "bold",
-    color: "#2C3E50",
-  },
-  paiementDate: {
-    fontSize: 11,
-    color: "#5A6C7D",
-    fontWeight: "600",
-  },
-  paiementMotif: {
-    fontSize: 13,
-    color: "#5A6C7D",
-    marginBottom: 4,
-  },
-  paiementPlace: {
-    fontSize: 12,
-    color: "#5A6C7D",
-    opacity: 0.8,
-  },
+  paiementMontant: { fontSize: 16, fontWeight: "bold", color: "#2C3E50" },
+  paiementDate: { fontSize: 11, color: "#5A6C7D", fontWeight: "600" },
+  paiementMotif: { fontSize: 13, color: "#5A6C7D", marginBottom: 4 },
+  paiementPlace: { fontSize: 12, color: "#5A6C7D", opacity: 0.8 },
   emptyState: {
     alignItems: "center",
     paddingVertical: 60,
     backgroundColor: "#FFFFFF",
     borderRadius: 12,
   },
-  emptyText: {
-    fontSize: 14,
-    color: "#5A6C7D",
-    marginTop: 12,
-  },
+  emptyText: { fontSize: 14, color: "#5A6C7D", marginTop: 12 },
   endHistoryText: {
     textAlign: "center",
     fontSize: 12,
@@ -775,9 +659,5 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 5,
   },
-  btnPaiementText: {
-    color: "#fff",
-    fontSize: 16,
-    fontWeight: "bold",
-  },
+  btnPaiementText: { color: "#fff", fontSize: 16, fontWeight: "bold" },
 });
