@@ -55,13 +55,12 @@ export interface MarchandStats {
 }
 
 export class MarchandsService {
-  
   /**
    * Récupère tous les marchands avec statistiques
    */
   async getAllMarchands(): Promise<Marchand[]> {
     const database = await db;
-    
+
     const marchands = await database.getAllAsync<Marchand>(`
       SELECT 
         m.*,
@@ -74,8 +73,32 @@ export class MarchandsService {
       GROUP BY m.id
       ORDER BY m.nom, m.prenom
     `);
-    
+
     return marchands;
+  }
+  /**
+   * Récupère un marchand par son numéro CIN
+   */
+  async getMarchandByCin(cin: string): Promise<Marchand | null> {
+    const database = await db;
+
+    const marchand = await database.getFirstAsync<Marchand>(
+      `
+    SELECT 
+      m.*,
+      COUNT(DISTINCT p.id) as nombre_places,
+      SUM(DISTINCT pay.montant) as total_paiements,
+      MAX(pay.date_paiement) as dernier_paiement
+    FROM marchands m
+    LEFT JOIN places p ON p.marchand_id = m.id
+    LEFT JOIN paiements pay ON pay.marchand_id = m.id
+    WHERE m.cin = ?
+    GROUP BY m.id
+  `,
+      [cin.trim()],
+    );
+
+    return marchand || null;
   }
 
   /**
@@ -84,8 +107,9 @@ export class MarchandsService {
   async searchMarchands(query: string): Promise<Marchand[]> {
     const database = await db;
     const searchTerm = `%${query}%`;
-    
-    const marchands = await database.getAllAsync<Marchand>(`
+
+    const marchands = await database.getAllAsync<Marchand>(
+      `
       SELECT 
         m.*,
         COUNT(DISTINCT p.id) as nombre_places,
@@ -101,8 +125,10 @@ export class MarchandsService {
         m.telephone LIKE ?
       GROUP BY m.id
       ORDER BY m.nom, m.prenom
-    `, [searchTerm, searchTerm, searchTerm, searchTerm]);
-    
+    `,
+      [searchTerm, searchTerm, searchTerm, searchTerm],
+    );
+
     return marchands;
   }
 
@@ -111,7 +137,7 @@ export class MarchandsService {
    */
   async filterByStatutPaiement(statut?: string): Promise<Marchand[]> {
     const database = await db;
-    
+
     let query = `
       SELECT 
         m.*,
@@ -122,16 +148,16 @@ export class MarchandsService {
       LEFT JOIN places p ON p.marchand_id = m.id
       LEFT JOIN paiements pay ON pay.marchand_id = m.id
     `;
-    
+
     const params: any[] = [];
-    
+
     if (statut) {
       query += ` WHERE m.statut_de_paiement = ?`;
       params.push(statut);
     }
-    
+
     query += ` GROUP BY m.id ORDER BY m.nom, m.prenom`;
-    
+
     return await database.getAllAsync<Marchand>(query, params);
   }
 
@@ -140,7 +166,7 @@ export class MarchandsService {
    */
   async filterByEtat(etat?: string): Promise<Marchand[]> {
     const database = await db;
-    
+
     let query = `
       SELECT 
         m.*,
@@ -151,16 +177,16 @@ export class MarchandsService {
       LEFT JOIN places p ON p.marchand_id = m.id
       LEFT JOIN paiements pay ON pay.marchand_id = m.id
     `;
-    
+
     const params: any[] = [];
-    
+
     if (etat) {
       query += ` WHERE m.etat = ?`;
       params.push(etat);
     }
-    
+
     query += ` GROUP BY m.id ORDER BY m.nom, m.prenom`;
-    
+
     return await database.getAllAsync<Marchand>(query, params);
   }
 
@@ -169,8 +195,9 @@ export class MarchandsService {
    */
   async getMarchandById(id: number): Promise<Marchand | null> {
     const database = await db;
-    
-    const marchand = await database.getFirstAsync<Marchand>(`
+
+    const marchand = await database.getFirstAsync<Marchand>(
+      `
       SELECT 
         m.*,
         COUNT(DISTINCT p.id) as nombre_places,
@@ -181,8 +208,10 @@ export class MarchandsService {
       LEFT JOIN paiements pay ON pay.marchand_id = m.id
       WHERE m.id = ?
       GROUP BY m.id
-    `, [id]);
-    
+    `,
+      [id],
+    );
+
     return marchand || null;
   }
 
@@ -191,8 +220,9 @@ export class MarchandsService {
    */
   async getMarchandStats(marchandId: number): Promise<MarchandStats> {
     const database = await db;
-    
-    const stats = await database.getFirstAsync<MarchandStats>(`
+
+    const stats = await database.getFirstAsync<MarchandStats>(
+      `
       SELECT 
         COALESCE(SUM(pay.montant), 0) as montant_total,
         COUNT(pay.id) as nombre_paiements,
@@ -202,15 +232,19 @@ export class MarchandsService {
       LEFT JOIN paiements pay ON pay.marchand_id = m.id
       LEFT JOIN places p ON p.marchand_id = m.id
       WHERE m.id = ?
-    `, [marchandId]);
-    
-    return stats || {
-      total_paiements: 0,
-      montant_total: 0,
-      nombre_paiements: 0,
-      nombre_places: 0,
-      dernier_paiement: null
-    };
+    `,
+      [marchandId],
+    );
+
+    return (
+      stats || {
+        total_paiements: 0,
+        montant_total: 0,
+        nombre_paiements: 0,
+        nombre_places: 0,
+        dernier_paiement: null,
+      }
+    );
   }
 
   /**
@@ -218,8 +252,9 @@ export class MarchandsService {
    */
   async getPaiementsByMarchand(marchandId: number): Promise<Paiement[]> {
     const database = await db;
-    
-    const paiements = await database.getAllAsync<Paiement>(`
+
+    const paiements = await database.getAllAsync<Paiement>(
+      `
       SELECT 
         pay.*,
         p.nom as place_nom,
@@ -231,8 +266,10 @@ export class MarchandsService {
       LEFT JOIN quittances q ON q.paiement_id = pay.id
       WHERE pay.marchand_id = ?
       ORDER BY pay.date_paiement DESC
-    `, [marchandId]);
-    
+    `,
+      [marchandId],
+    );
+
     return paiements;
   }
 
@@ -241,8 +278,9 @@ export class MarchandsService {
    */
   async getPlacesByMarchand(marchandId: number): Promise<Place[]> {
     const database = await db;
-    
-    const places = await database.getAllAsync<Place>(`
+
+    const places = await database.getAllAsync<Place>(
+      `
       SELECT 
         p.*,
         h.nom as hall_nom,
@@ -254,8 +292,10 @@ export class MarchandsService {
       LEFT JOIN marchees m ON m.id = p.marchee_id
       WHERE p.marchand_id = ?
       ORDER BY p.nom
-    `, [marchandId]);
-    
+    `,
+      [marchandId],
+    );
+
     return places;
   }
 
@@ -268,32 +308,36 @@ export class MarchandsService {
     types_activite: string[];
   }> {
     const database = await db;
-    
-    const statutsPaiement = await database.getAllAsync<{ statut_de_paiement: string }>(`
+
+    const statutsPaiement = await database.getAllAsync<{
+      statut_de_paiement: string;
+    }>(`
       SELECT DISTINCT statut_de_paiement 
       FROM marchands 
       WHERE statut_de_paiement IS NOT NULL
       ORDER BY statut_de_paiement
     `);
-    
+
     const etats = await database.getAllAsync<{ etat: string }>(`
       SELECT DISTINCT etat 
       FROM marchands 
       WHERE etat IS NOT NULL
       ORDER BY etat
     `);
-    
-    const typesActivite = await database.getAllAsync<{ type_activite: string }>(`
+
+    const typesActivite = await database.getAllAsync<{
+      type_activite: string;
+    }>(`
       SELECT DISTINCT type_activite 
       FROM marchands 
       WHERE type_activite IS NOT NULL
       ORDER BY type_activite
     `);
-    
+
     return {
-      statuts_paiement: statutsPaiement.map(s => s.statut_de_paiement),
-      etats: etats.map(e => e.etat),
-      types_activite: typesActivite.map(t => t.type_activite)
+      statuts_paiement: statutsPaiement.map((s) => s.statut_de_paiement),
+      etats: etats.map((e) => e.etat),
+      types_activite: typesActivite.map((t) => t.type_activite),
     };
   }
 
@@ -302,20 +346,23 @@ export class MarchandsService {
    */
   async countByStatut(): Promise<Record<string, number>> {
     const database = await db;
-    
-    const counts = await database.getAllAsync<{ statut_de_paiement: string; count: number }>(`
+
+    const counts = await database.getAllAsync<{
+      statut_de_paiement: string;
+      count: number;
+    }>(`
       SELECT 
         COALESCE(statut_de_paiement, 'Non défini') as statut_de_paiement,
         COUNT(*) as count
       FROM marchands
       GROUP BY statut_de_paiement
     `);
-    
+
     const result: Record<string, number> = {};
-    counts.forEach(c => {
+    counts.forEach((c) => {
       result[c.statut_de_paiement] = c.count;
     });
-    
+
     return result;
   }
 }
